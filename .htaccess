@@ -1,0 +1,8 @@
+RewriteEngine On
+RewriteBase /mi-api-prueba/
+
+# Si NO es /public
+RewriteCond %{REQUEST_URI} !^/mi-api-prueba/public/
+
+# Redirigir todo a /public manteniendo la ruta
+RewriteRule ^(.*)$ public/$1 [L]
