@@ -1,5 +1,28 @@
 <?php
 
+// Funciones para el GET
+function listarPropiedades() {
+
+    // 1. Limpiamos cualquier salida previa (espacios, etc)
+    if (ob_get_length()) ob_clean();
+
+    // 2. Definimos los datos
+    $respuesta = [
+        "ok" => true,
+        "mensaje" => "Listado de propiedades en construccion" // Sin tilde para probar
+    ];
+
+    // 3. Enviamos los headers correctos
+    header('Content-Type: application/json; charset=utf-8');
+        
+    // 4. Codificamos con opciones de seguridad
+    echo json_encode($respuesta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        
+    exit;
+}
+
+// Funciones para el POST
+
 function crearPropiedad() {
 
     // Importamos las dependencias usando la constante global
