@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 error_reporting(E_ALL);
+
+// Definimos la ruta absoluta hacia la carpeta src
+// dirname(__DIR__) nos saca de 'public' y nos posiciona en la raíz del proyecto
+define('SRC_PATH', dirname(__DIR__) . '/src/');
+
 ini_set('display_errors', 1);
 
 header("Content-Type: application/json");
@@ -10,23 +15,25 @@ header("Content-Type: application/json");
 // Método HTTP
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// URI pedida
+// --- DETECCIÓN DINÁMICA Y AUTOMÁTICA ---
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-
-// Quitar query string
 $path = parse_url($requestUri, PHP_URL_PATH);
 
-// Detectar base automáticamente (ej: /sistema-alquiler/public)
-$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-$scriptDir  = str_replace('\\', '/', dirname($scriptName));
+// 1. Obtenemos la ruta al index.php (ej: /sistema-alquiler/public/index.php)
+$scriptName = $_SERVER['SCRIPT_NAME']; 
 
-// Quitar base del path
-if ($scriptDir !== '/' && strpos($path, $scriptDir) === 0) {
-    $path = substr($path, strlen($scriptDir));
+// 2. Obtenemos la carpeta del proyecto quitando "/public/index.php"
+// Esto nos deja solo con "/sistema-alquiler" (o la subcarpeta que sea)
+$baseDir = str_replace('/public/index.php', '', $scriptName);
+
+// 3. Si el path empieza con esa carpeta base, la removemos del path
+if ($baseDir !== '' && strpos($path, $baseDir) === 0) {
+    $path = substr($path, strlen($baseDir));
 }
 
-// Normalizar formato
+// 4. Normalizamos para que siempre sea /propiedades, /health, etc.
 $path = '/' . trim($path, '/');
+// --- FIN DETECCIÓN ---
 
 // Ruta de prueba
 if ($method === 'GET' && $path === '/health') {
@@ -56,10 +63,21 @@ if ($method === 'GET' && $path === '/') {
     exit;
 }
 
-// No encontrada
-header('Content-Type: application/json; charset=utf-8');
+// Si el metodo es POST y la ruta es /propiedades, se llama a la función crearPropiedad() en /controllers/PropiedadController.php
+
+if ($method === 'POST' && $path === '/propiedades') {
+    require_once SRC_PATH . 'controllers/PropiedadController.php';
+
+    crearPropiedad();
+
+    exit;
+}
+
+// Si no se encuentra la ruta, devolver error 404
+
 http_response_code(404);
 echo json_encode([
-    'error' => 'Not Found',
+    'error' => 'Ruta no encontrada',
     'path'  => $path
-], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+]);
+exit;

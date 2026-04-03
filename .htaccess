@@ -1,8 +1,7 @@
 RewriteEngine On
-RewriteBase /mi-api-prueba/
 
-# Si NO es /public
-RewriteCond %{REQUEST_URI} !^/mi-api-prueba/public/
+# Si la petición ya apunta a la carpeta public, no hacer nada
+RewriteCond %{REQUEST_URI} !^/public/
 
-# Redirigir todo a /public manteniendo la ruta
+# Redirigir todo a la carpeta public manteniendo lo que venga después
 RewriteRule ^(.*)$ public/$1 [L]
