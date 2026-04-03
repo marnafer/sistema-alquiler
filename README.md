@@ -2,9 +2,11 @@
 App web para alquileres permanentes
 
 
-Contrato del Endpoint POST
+## Contrato del Endpoint POST
 
-Endpoint: POST /api/propiedades
+**Endpoint: POST /api/propiedades**
+
+```php
 
 Request Body (JSON):
 {
@@ -46,7 +48,11 @@ HTTP/1.1 400 Bad Request
   }
 }
 
-SANITIZACION
+```
+
+**SANITIZACION**
+
+```php
 
 function sanitizarPropiedad($data) {
     return [
@@ -69,7 +75,11 @@ function sanitizarPropiedad($data) {
     ];
 }
 
-VALIDACIONES
+```
+
+**VALIDACIONES**
+
+```php
 
 function validarPropiedad($data) {
     $errores = [];
@@ -146,4 +156,6 @@ function validarPropiedad($data) {
 
     return $errores;
 }
+
+```
 
