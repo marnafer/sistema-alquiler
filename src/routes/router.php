@@ -1,7 +1,14 @@
 <?php
-// src/routes/propiedades.php
+// src/routes/router.php
 
 require_once SRC_PATH . 'controllers/PropiedadController.php';
+
+if ($path === '/propiedades/nuevo') {
+    if ($method === 'GET') {
+        mostrarFormulario();
+    }
+    exit;
+}
 
 if (trim($path) === '/propiedades') {
     

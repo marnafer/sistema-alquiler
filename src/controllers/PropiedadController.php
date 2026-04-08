@@ -1,6 +1,16 @@
 <?php
 
 // Funciones para el GET
+
+function mostrarFormulario() {
+    // 1. Le decimos al navegador: "Lo que viene ahora es una pÃ¡gina web"
+    header('Content-Type: text/html; charset=utf-8');
+    
+    // 2. Cargamos el archivo
+    require_once SRC_PATH . 'views/propiedades_form.php';
+    exit;
+}
+
 function listarPropiedades() {
 
     // 1. Limpiamos cualquier salida previa (espacios, etc)
@@ -29,13 +39,14 @@ function crearPropiedad() {
     require_once SRC_PATH . 'sanitizers/PropiedadSanitizer.php';
     require_once SRC_PATH . 'validators/PropiedadValidator.php';
 
-    // Obtener los datos del cuerpo de la petición (JSON)
-    $data = json_decode(file_get_contents('php://input'), true);
+// Si viene de un formulario HTML, usamos $_POST. Si viene de Postman/JS, usamos php://input.
+    $json = json_decode(file_get_contents('php://input'), true);
+    $data = $json ?? $_POST;
 
-    // Si el JSON es inválido o está vacío
+    // Si el JSON es invÃ¡lido o estÃ¡ vacÃ­o
     if (!$data) {
         http_response_code(400);
-        echo json_encode(['error' => 'Datos JSON no válidos o vacíos']);
+        echo json_encode(['error' => 'Datos JSON no vÃ¡lidos o vacÃ­os']);
         exit;
     }
 
@@ -51,7 +62,7 @@ function crearPropiedad() {
         exit;
     }
 
-    // 3. Respuesta simulada (Próximamente aquí irá la inserción a la DB)
+    // 3. Respuesta simulada (PrÃ³ximamente aquÃ­ irÃ¡ la inserciÃ³n a la DB)
     http_response_code(201);
     echo json_encode([
         'ok' => true,
