@@ -43,8 +43,8 @@ function validarPropiedad($data) {
         $errores[] = "Campo obligatorio: cantidad_dormitorios";
     } elseif ($data['cantidad_dormitorios'] < 1 || $data['cantidad_dormitorios'] > 10) {
         $errores[] = "Debe ser un numero entre 1 y 10 (cantidad_dormitorios)";
-    } elseif ($data['cantidad_dormitorios'] >= $data['cantidad_ambientes']) {
-        $errores[] = "Los dormitorios deben ser menores que la cantidad de ambientes";
+    } elseif ($data['cantidad_dormitorios'] > $data['cantidad_ambientes']) {
+        $errores[] = "Los dormitorios no pueden ser mayores que la cantidad de ambientes";
     }
 
     // CANTIDAD BAÑOS
@@ -52,12 +52,14 @@ function validarPropiedad($data) {
         $errores[] = "Campo obligatorio: cantidad_banos";
     } elseif ($data['cantidad_banos'] < 1 || $data['cantidad_banos'] > 10) {
         $errores[] = "Debe ser un numero entre 1 y 10 (cantidad_banos)";
+    } elseif ($data['cantidad_banos'] > $data['cantidad_ambientes']) {
+        $errores[] = "Los baños no pueden ser mayores que la cantidad de ambientes";
     }
 
     // CAPACIDAD (opcional)
     if ($data['capacidad'] !== null) {
-        if ($data['capacidad'] < 1 || $data['capacidad'] > 10) {
-            $errores[] = "La capacidad debe ser un numero entre 1 y 10";
+        if ($data['capacidad'] < 1 || $data['capacidad'] > 20) {
+            $errores[] = "La capacidad debe ser un numero entre 1 y 20";
         }
     }
 

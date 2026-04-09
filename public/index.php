@@ -20,19 +20,22 @@ $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 // 1. Extraemos el path puro (sin ?query_string)
 $path_bruto = parse_url($requestUri, PHP_URL_PATH);
 
-// 2. Detectamos la base del proyecto (Carpeta htdocs + /public)
-// Buscamos dónde termina la carpeta public en la URL real
-$scriptName = $_SERVER['SCRIPT_NAME']; // Ej: /sistema-alquiler/public/index.php
-$baseDir = dirname($scriptName);       // Ej: /sistema-alquiler/public
+// 2. DETECCIÓN AUTOMÁTICA DE LA BASE
+// Tomamos la carpeta donde está el index.php
+$scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 
-// 3. Limpiamos la base de la ruta
-if ($baseDir !== '/' && strpos($path_bruto, $baseDir) === 0) {
+// Si el script está en /sistema-alquiler/public pero la URL no lo tiene,
+// necesitamos limpiar el path de forma inteligente.
+$baseDir = rtrim($scriptPath, '/');
+
+// 3. LIMPIEZA DINÁMICA
+// Eliminamos la base de la ruta bruta
+if ($baseDir !== '' && strpos($path_bruto, $baseDir) === 0) {
     $path_bruto = substr($path_bruto, strlen($baseDir));
 }
 
-// 4. NORMALIZACIÓN FINAL
+// 4. NORMALIZACIÓN (Igual que el tuyo)
 $path = '/' . trim((string)$path_bruto, "/ \t\n\r\0\x0B");
-
 // --- FIN DE DETECCIÓN ---
 
 // --- SECCIÓN DE RUTAS ---
@@ -67,9 +70,17 @@ if ($method === 'GET' && $path === '/') {
 
 // Si la URL empieza con /propiedades, le pasamos la pelota al archivo de rutas
 if (strpos($path, '/propiedades') === 0) {
+    // IMPORTANTE: Asegúrate de que PropiedadController sea accesible aquí
     require_once SRC_PATH . 'routes/router.php';
+} else {
+    // Si nada coincide
+    http_response_code(404);
+    echo json_encode([
+        "error" => "Ruta no encontrada",
+        "path_detectado" => $path, // Esto te ayudará a debuguear
+        "metodo" => $method
+    ]);
 }
-
 // --- FIN DE RUTAS ---
 
 // Si no se encuentra la ruta, devolver error 404

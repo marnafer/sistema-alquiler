@@ -79,7 +79,7 @@
     </div>
 <?php endif; ?>
 
-<form action="/sistema-alquiler/propiedades" method="POST" id="form-propiedad" onsubmit="return validarFormulario()">
+<form action="/propiedades" method="POST" id="form-propiedad" onsubmit="return validarFormulario()">
 
     <p class="seccion">Información general</p>
 
@@ -157,7 +157,7 @@
             <input type="number" name="cantidad_dormitorios" min="1" max="10"
                    placeholder="1 – 10"
                    value="<?= htmlspecialchars($datos['cantidad_dormitorios'] ?? '') ?>">
-            <span class="hint">Debe ser menor a la cantidad de ambientes</span>
+            <span class="hint">No puede ser mayor a la cantidad de ambientes</span>
             <span class="msg-error" id="error-cantidad_dormitorios"></span>
         </div>
 
@@ -166,7 +166,7 @@
             <input type="number" name="cantidad_banos" min="1" max="10"
                    placeholder="1 – 10"
                    value="<?= htmlspecialchars($datos['cantidad_banos'] ?? '') ?>">
-            <span class="hint">Debe ser menor a la cantidad de ambientes</span>
+            <span class="hint">No puede ser mayor a la cantidad de ambientes</span>
             <span class="msg-error" id="error-cantidad_banos"></span>
         </div>
 
@@ -293,8 +293,8 @@ function validarFormulario() {
     } else if (dormitorios < 1 || dormitorios > 10) {
         setError('cantidad_dormitorios', 'Debe ser un número entre 1 y 10');
         ok = false;
-    } else if (ambientes !== null && dormitorios >= ambientes) {
-        setError('cantidad_dormitorios', 'Deben ser menos que la cantidad de ambientes');
+    } else if (ambientes !== null && dormitorios > ambientes) {
+        setError('cantidad_dormitorios', 'No puede ser mayor que la cantidad de ambientes');
         ok = false;
     }
 
@@ -305,8 +305,8 @@ function validarFormulario() {
     } else if (banos < 1 || banos > 10) {
         setError('cantidad_banos', 'Debe ser un número entre 1 y 10');
         ok = false;
-    } else if (ambientes !== null && banos >= ambientes) { 
-        setError('cantidad_banos', 'Deben ser menos que la cantidad de ambientes');
+    } else if (ambientes !== null && banos > ambientes) { 
+        setError('cantidad_banos', 'No puede ser mayor que la cantidad de ambientes');
         ok = false;  
     }
 

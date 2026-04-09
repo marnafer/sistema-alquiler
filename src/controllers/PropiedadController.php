@@ -64,6 +64,7 @@ function crearPropiedad() {
 
     // 3. Respuesta simulada (Próximamente aquí irá la inserción a la DB)
     http_response_code(201);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'ok' => true,
         'mensaje' => 'Propiedad validada correctamente',
