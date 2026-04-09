@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Controllers;
+
 function validarPropiedad($data) {
     $errores = [];
 

@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Controllers;
+
 function sanitizarPropiedad($data) {
     return [
         'titulo' => htmlspecialchars(trim($data['titulo'] ?? '')),

@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Controllers;
+
 // Funciones para el GET
 
 function mostrarFormulario() {
