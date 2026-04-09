@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
+
+// Cargamos el Autoload de Composer
 require_once __DIR__ . '/vendor/autoload.php';
+
+// Cargamos el Capsule Manager para la DB
+require_once __DIR__ . '/src/database.php';
 
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 error_reporting(E_ALL);
