@@ -1,24 +1,38 @@
 <?php
 
-namespace App\Controllers;
-
-function sanitizarPropiedad($data) {
+function sanitizarPropiedad(array $data): array {
     return [
+        // Campos de texto: Limpieza de espacios y protección contra XSS
         'titulo' => htmlspecialchars(trim($data['titulo'] ?? '')),
-        'descripcion' => isset($data['descripcion']) 
+        
+        // Campo opcional (permite NULL en la DB)
+        'descripcion' => isset($data['descripcion']) && trim($data['descripcion']) !== '' 
             ? htmlspecialchars(trim($data['descripcion'])) 
             : null,
-        'precio' => (int) filter_var($data['precio'] ?? 0, FILTER_SANITIZE_NUMBER_INT),
-        'ubicacion' => htmlspecialchars(trim($data['ubicacion'] ?? '')),
-        'cantidad_ambientes' => (int) filter_var($data['cantidad_ambientes'] ?? 0, FILTER_SANITIZE_NUMBER_INT),
-        'cantidad_dormitorios' => (int) filter_var($data['cantidad_dormitorios'] ?? 0, FILTER_SANITIZE_NUMBER_INT),
-        'cantidad_banos' => (int) filter_var($data['cantidad_banos'] ?? 0, FILTER_SANITIZE_NUMBER_INT),
-        'capacidad' => isset($data['capacidad']) 
-            ? (int) filter_var($data['capacidad'], FILTER_SANITIZE_NUMBER_INT) 
+
+        // Precio: IMPORTANTE usar FLOAT para no perder los centavos (decimal 12,2)
+        'precio' => filter_var($data['precio'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+
+        'direccion' => htmlspecialchars(trim($data['direccion'] ?? '')),
+
+        // Cantidades: Forzamos a entero positivo (unsigned en la DB)
+        'cantidad_ambientes' => abs((int)($data['cantidad_ambientes'] ?? 0)),
+        'cantidad_dormitorios' => abs((int)($data['cantidad_dormitorios'] ?? 0)),
+        'cantidad_banos' => abs((int)($data['cantidad_banos'] ?? 0)),
+
+        // Capacidad: Campo opcional (permite NULL en la DB)
+        'capacidad' => isset($data['capacidad']) && $data['capacidad'] !== '' 
+            ? abs((int)$data['capacidad']) 
             : null,
+
+        // Disponible: Tinyint(1) tratado como booleano
         'disponible' => isset($data['disponible']) 
-            ? filter_var($data['disponible'], FILTER_VALIDATE_BOOLEAN) 
-            : true,
-        'categoria_id' => (int) filter_var($data['categoria_id'] ?? 0, FILTER_SANITIZE_NUMBER_INT)
+            ? (filter_var($data['disponible'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0) 
+            : 1,
+
+        // Claves Foráneas: Siempre enteros
+        'categoria_id' => (int)($data['categoria_id'] ?? 0),
+        'administrador_id' => (int)($data['administrador_id'] ?? 0),
+        'localidad_id' => (int)($data['localidad_id'] ?? 0)
     ];
 }
