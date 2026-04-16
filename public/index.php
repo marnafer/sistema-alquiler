@@ -24,22 +24,26 @@ header("Content-Type: application/json");
 $method = strtoupper(trim($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 
-// 1. Extraemos el path bruto y limpiamos query strings (?id=1)
+// 1. Extraemos el path puro
 $path_bruto = parse_url($requestUri, PHP_URL_PATH);
 
-// 2. DETECCIÓN DINÁMICA DE LA BASE
-// 'SCRIPT_NAME' es /sistema-alquiler/public/index.php
-// dirname() nos da /sistema-alquiler/public
-$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+// 2. DETECCIÓN DINÁMICA DE LA RAIZ DEL SCRIPT
+// Esto nos da la carpeta donde está el proyecto en XAMPP (ej: /sistema-alquiler)
+$scriptName = $_SERVER['SCRIPT_NAME']; // /sistema-alquiler/public/index.php
+$baseDir = str_replace('\\', '/', dirname(dirname($scriptName))); // Nos sube un nivel fuera de public
 
 // 3. LIMPIEZA INTELIGENTE
-// Si la URL empieza con el directorio del script, lo removemos.
-if ($scriptDir !== '/' && strpos($path_bruto, $scriptDir) === 0) {
-    $path_bruto = substr($path_bruto, strlen($scriptDir));
+// Quitamos la carpeta del proyecto (sistema-alquiler)
+if ($baseDir !== '/' && strpos($path_bruto, $baseDir) === 0) {
+    $path_bruto = substr($path_bruto, strlen($baseDir));
 }
 
-// 4. NORMALIZACIÓN FINAL
-// Eliminamos barras sobrantes y aseguramos que empiece con /
+// Quitamos el prefijo /public si todavía está presente en la URL
+if (strpos($path_bruto, '/public') === 0) {
+    $path_bruto = substr($path_bruto, strlen('/public'));
+}
+
+// 4. NORMALIZACIÓN
 $path = '/' . trim((string)$path_bruto, "/");
 
 // --- FIN DE DETECCIÓN ---
