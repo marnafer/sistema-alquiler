@@ -1,11 +1,16 @@
 <?php
+
 declare(strict_types=1);
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Cargamos el Autoload de Composer
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // Cargamos el Capsule Manager para la DB
-require_once __DIR__ . '/src/database.php';
+require_once __DIR__ . '/../src/database.php';
 
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 error_reporting(E_ALL);
@@ -23,77 +28,69 @@ header("Content-Type: application/json");
 $method = strtoupper(trim($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 
-// 1. Extraemos el path puro (sin ?query_string)
+// 1. Extraemos el path bruto y limpiamos query strings (?id=1)
 $path_bruto = parse_url($requestUri, PHP_URL_PATH);
 
-// 2. DETECCIÓN AUTOMÁTICA DE LA BASE
-// Tomamos la carpeta donde está el index.php
-$scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+// 2. DETECCIÓN DINÁMICA DE LA BASE
+// 'SCRIPT_NAME' es /sistema-alquiler/public/index.php
+// dirname() nos da /sistema-alquiler/public
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 
-// Si el script está en /sistema-alquiler/public pero la URL no lo tiene,
-// necesitamos limpiar el path de forma inteligente.
-$baseDir = rtrim($scriptPath, '/');
-
-// 3. LIMPIEZA DINÁMICA
-// Eliminamos la base de la ruta bruta
-if ($baseDir !== '' && strpos($path_bruto, $baseDir) === 0) {
-    $path_bruto = substr($path_bruto, strlen($baseDir));
+// 3. LIMPIEZA INTELIGENTE
+// Si la URL empieza con el directorio del script, lo removemos.
+if ($scriptDir !== '/' && strpos($path_bruto, $scriptDir) === 0) {
+    $path_bruto = substr($path_bruto, strlen($scriptDir));
 }
 
-// 4. NORMALIZACIÓN (Igual que el tuyo)
-$path = '/' . trim((string)$path_bruto, "/ \t\n\r\0\x0B");
+// 4. NORMALIZACIÓN FINAL
+// Eliminamos barras sobrantes y aseguramos que empiece con /
+$path = '/' . trim((string)$path_bruto, "/");
+
 // --- FIN DE DETECCIÓN ---
 
 // --- SECCIÓN DE RUTAS ---
 
-// Ruta de prueba
-if ($method === 'GET' && $path === '/health') {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(200);
-
-    echo json_encode([
-        'status'      => 'ok',
-        'timestamp'   => date('Y-m-d H:i:s'),
-        'php_version' => phpversion(),
-        'server'      => $_SERVER['SERVER_SOFTWARE'] ?? 'Apache'
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-    exit;
-}
-
-// Ruta base opcional
-if ($method === 'GET' && $path === '/') {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(200);
-
-    echo json_encode([
-        'message' => 'API funcionando',
-        'health'  => '/health'
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-    exit;
-}
-
-// Si la URL empieza con /propiedades, le pasamos la pelota al archivo de rutas
-if (strpos($path, '/propiedades') === 0) {
-    // IMPORTANTE: Asegúrate de que PropiedadController sea accesible aquí
-    require_once SRC_PATH . 'routes/router.php';
-} else {
-    // Si nada coincide
-    http_response_code(404);
-    echo json_encode([
-        "error" => "Ruta no encontrada",
-        "path_detectado" => $path, // Esto te ayudará a debuguear
-        "metodo" => $method
+// 1. Rutas de Sistema (Respuestas rápidas)
+if ($path === '/health') {
+    renderJson([
+        'status'    => 'ok',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'php'       => phpversion()
     ]);
 }
-// --- FIN DE RUTAS ---
 
-// Si no se encuentra la ruta, devolver error 404
+if ($path === '/') {
+    renderJson([
+        'message' => 'API Alquiler Permanente funcionando',
+        'endpoints' => ['/propiedades', '/health']
+    ]);
+}
 
-http_response_code(404);
-echo json_encode([
-    'error' => 'Ruta no encontrada',
-    'path'  => $path
-]);
-exit;
+// 2. Delegación al Módulo de Propiedades
+// Usamos strpos !== false para que tome /propiedades, /propiedades_form, etc.
+if (strpos($path, '/propiedades') !== false) {
+    $routerPath = SRC_PATH . 'routes/router.php';
+    
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+        // Importante: El router.php debe gestionar el 404 interno si no coincide la sub-ruta
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
+} else {
+    // 3. Si no es ninguna de las anteriores
+    renderError("Ruta no encontrada: " . $path, 404);
+}
+
+// --- FUNCIONES AUXILIARES ---
+
+function renderJson(array $data, int $code = 200): void {
+    header("Content-Type: application/json; charset=utf-8");
+    http_response_code($code);
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit; // Crucial para detener la ejecución aquí
+}
+
+function renderError(string $message, int $code): void {
+    renderJson(["error" => $message, "path_detectado" => $GLOBALS['path'] ?? null], $code);
+}

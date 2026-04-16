@@ -3,6 +3,10 @@
 
 require_once SRC_PATH . 'controllers/PropiedadController.php';
 
+use function App\Controllers\mostrarFormulario;
+use function App\Controllers\listarPropiedades;
+use function App\Controllers\crearPropiedad;
+
 if ($path === '/propiedades/nuevo') {
     if ($method === 'GET') {
         mostrarFormulario();
