@@ -1,7 +1,7 @@
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Si la petición ya apunta a la carpeta public, no hacer nada
-RewriteCond %{REQUEST_URI} !^/public/
-
-# Redirigir todo a la carpeta public manteniendo lo que venga después
-RewriteRule ^(.*)$ public/$1 [L]
+    # Redirigir todo lo que llegue a la raíz hacia la carpeta /public
+    RewriteRule ^$ public/index.php [L]
+    RewriteRule ^((?!public/).*)$ public/$1 [L]
+</IfModule>
