@@ -35,43 +35,48 @@ function listarPropiedades() {
 
 // Funciones para el POST
 
+require_once __DIR__ . '/../sanitizers/PropiedadSanitizer.php';
+require_once __DIR__ . '/../validators/PropiedadValidator.php';
+
+use App\Models\Propiedad; // Asegurate de tener el modelo creado
+
 function crearPropiedad() {
+    // 1. Recibir los datos crudos (suponiendo que vienen por POST o JSON)
+    $input = $_POST; 
 
-    // Importamos las dependencias usando la constante global
-    require_once SRC_PATH . 'sanitizers/PropiedadSanitizer.php';
-    require_once SRC_PATH . 'validators/PropiedadValidator.php';
+    // 2. SANITIZAR: Limpiamos los datos antes de cualquier chequeo
+    $datosLimpios = sanitizarPropiedad($input);
 
-// Si viene de un formulario HTML, usamos $_POST. Si viene de Postman/JS, usamos php://input.
-    $json = json_decode(file_get_contents('php://input'), true);
-    $data = $json ?? $_POST;
+    // 3. VALIDAR: Verificamos si los datos limpios cumplen las reglas
+    $errores = validarPropiedad($datosLimpios);
 
-    // Si el JSON es inválido o está vacío
-    if (!$data) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Datos JSON no válidos o vacíos']);
-        exit;
-    }
-
-    // 1. Sanitizar
-    $dataSanitizada = sanitizarPropiedad($data);
-
-    // 2. Validar
-    $errores = validarPropiedad($dataSanitizada);
-
+    // 4. CONTROL DE ERRORES
     if (!empty($errores)) {
-        http_response_code(400);
-        echo json_encode(['errores' => $errores]);
-        exit;
+        // Si hay errores, frenamos y avisamos al usuario
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $errores
+        ]);
+        return;
     }
 
-    // 3. Respuesta simulada (Próximamente aquí irá la inserción a la DB)
-    http_response_code(201);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'ok' => true,
-        'mensaje' => 'Propiedad validada correctamente',
-        'data' => $dataSanitizada
-    ]);
-    exit;
+    // 5. PERSISTENCIA CON ELOQUENT
+    try {
+        // Si llegamos acá, los datos están blindados
+        $nuevaPropiedad = Propiedad::create($datosLimpios);
 
+        echo json_encode([
+            'success' => true,
+            'message' => 'Propiedad creada con éxito',
+            'id' => $nuevaPropiedad->id
+        ]);
+    } catch (\Exception $e) {
+        // Capturamos errores de la base de datos (ej: falla de conexión)
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al guardar en la base de datos: ' . $e->getMessage()
+        ]);
+    }
 }
