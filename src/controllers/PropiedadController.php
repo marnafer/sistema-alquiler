@@ -38,7 +38,7 @@ function listarPropiedades() {
 require_once __DIR__ . '/../sanitizers/PropiedadSanitizer.php';
 require_once __DIR__ . '/../validators/PropiedadValidator.php';
 
-use App\Models\Propiedad; // Asegurate de tener el modelo creado
+use App\Models\Propiedad; 
 
 function crearPropiedad() {
     // 1. Recibir los datos crudos (suponiendo que vienen por POST o JSON)

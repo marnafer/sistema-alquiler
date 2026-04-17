@@ -66,7 +66,7 @@ if ($path === '/') {
     ]);
 }
 
-// 2. Delegación al Módulo de Propiedades
+// Rutas Módulo de Propiedades
 // Usamos strpos !== false para que tome /propiedades, /propiedades_form, etc.
 if (strpos($path, '/propiedades') !== false) {
     $routerPath = SRC_PATH . 'routes/router.php';
@@ -79,6 +79,20 @@ if (strpos($path, '/propiedades') !== false) {
     }
 } else {
     // 3. Si no es ninguna de las anteriores
+    renderError("Ruta no encontrada: " . $path, 404);
+}
+
+// Rutas Módulo Favoritos
+
+elseif (strpos($path, '/favoritos') !== false) {
+    $routerPath = SRC_PATH . 'routes/favoritos_router.php'; // Creamos un router específico
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas de favoritos no encontrado", 500);
+    }
+}
+else {
     renderError("Ruta no encontrada: " . $path, 404);
 }
 

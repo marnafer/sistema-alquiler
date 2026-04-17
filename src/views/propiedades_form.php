@@ -38,7 +38,7 @@
 </head>
 <body>
 
-<h1>Publicar Inmueble para Alquiler Permanente</h1>
+<h1>Publicar Inmueble</h1>
 
 <?php if (!empty($errores)): ?>
     <div class="errores">
