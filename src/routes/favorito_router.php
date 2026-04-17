@@ -35,10 +35,14 @@ if ($path === '/favoritos/quitar') {
     exit;
 }
 
-// --- Vista: Listado de Favoritos (Opcional por ahora) ---
-if ($path === '/favoritos/') {
+// --- Vista: Listado de Favoritos ---
+if ($path === '/favoritos') {
     if ($method === 'GET') {
         $controller->listar_Favoritos();
+    } else {
+        http_response_code(405);
     }
     exit;
+
+   
 }
