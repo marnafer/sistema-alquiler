@@ -63,4 +63,25 @@ class FavoritosController {
             die("Error al eliminar: " . $e->getMessage());
         }
     }
+
+    /**
+    * Lista los favoritos del usuario
+    */
+    public function listar_Favoritos() {
+        // Simulamos el ID del usuario logueado (esto luego vendrá de $_SESSION)
+        $usuario_id = 1; 
+
+        try {
+            // Obtenemos los favoritos del usuario e incluimos la relación con 'propiedad'
+            // Esto asume que tienes definida la relación en tu modelo Favorito
+            $misFavoritos = Favorito::where('usuario_id', $usuario_id)->get();
+
+            // Cargamos la vista de favoritos pasándole los datos
+            // El path de la vista dependerá de cómo tengas organizada tu carpeta 'views'
+            require_once SRC_PATH . 'views/favoritos/favoritos_lista.php';
+
+        } catch (\Exception $e) {
+            die("Error al cargar la lista de favoritos: " . $e->getMessage());
+        }
+    }
 }
