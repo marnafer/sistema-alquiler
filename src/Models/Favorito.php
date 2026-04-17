@@ -6,11 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 class Favorito extends Model {
     protected $table = 'favoritos';
     
-    // IMPORTANTE: La tabla no tiene una columna 'id' simple
     protected $primaryKey = ['usuario_id', 'propiedad_id'];
-    public $incrementing = false; // No es autoincremental
-    
-    public $timestamps = false; // No tiene created_at/updated_at
+    public $incrementing = false; 
+    public $timestamps = false; 
 
     protected $fillable = ['usuario_id', 'propiedad_id'];
+    
+    /**
+     * Relación para traer los datos de la propiedad vinculada
+     */
+    public function propiedad() { // <--- Yo dejaría 'propiedad' por simplicidad
+        return $this->belongsTo(Propiedad::class, 'propiedad_id');
+    }
 }

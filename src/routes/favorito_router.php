@@ -1,34 +1,44 @@
 <?php
-// src/routes/router.php
+/**
+ * Router del Módulo de Favoritos
+ * Gestiona las acciones de agregar y quitar de la lista de deseos
+ */
 
-require_once SRC_PATH . 'controllers/PropiedadController.php';
+require_once SRC_PATH . 'controllers/FavoritosController.php';
 
-use function App\Controllers\mostrarFormulario;
-use function App\Controllers\listarPropiedades;
-use function App\Controllers\crearPropiedad;
+use App\Controllers\FavoritosController;
 
-if ($path === '/propiedades/nuevo') {
-    if ($method === 'GET') {
-        mostrarFormulario();
+$controller = new FavoritosController();
+
+// Obtenemos el método de la petición (POST en este caso para acciones)
+$method = $_SERVER['REQUEST_METHOD'];
+
+// --- Acción: Agregar a Favoritos ---
+if ($path === '/favoritos/agregar') {
+    if ($method === 'POST') {
+        $controller->agregar();
+    } else {
+        http_response_code(405);
+        echo "Método no permitido para esta acción.";
     }
     exit;
 }
 
-if (trim($path) === '/propiedades') {
-    
-    switch ($method) {
-        case 'GET':
-            listarPropiedades(); // Delegamos al controlador
-            break;
-            
-        case 'POST':
-            crearPropiedad(); // Delegamos al controlador
-            break;
-
-        default:
-            http_response_code(405);
-            echo json_encode(["error" => "Método $method no permitido"]);
-            break;
+// --- Acción: Quitar de Favoritos ---
+if ($path === '/favoritos/quitar') {
+    if ($method === 'POST') {
+        $controller->quitar();
+    } else {
+        http_response_code(405);
+        echo "Método no permitido para esta acción.";
     }
-    exit; 
+    exit;
+}
+
+// --- Vista: Listado de Favoritos (Opcional por ahora) ---
+if ($path === '/favoritos/') {
+    if ($method === 'GET') {
+        $controller->listar_Favoritos();
+    }
+    exit;
 }

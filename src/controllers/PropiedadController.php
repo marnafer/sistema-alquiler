@@ -21,7 +21,7 @@ function listarPropiedades() {
     // 2. Definimos los datos
     $respuesta = [
         "ok" => true,
-        "mensaje" => "Listado de propiedades en construccion" // Sin tilde para probar
+        "mensaje" => "Listado de propiedades en construccion" 
     ];
 
     // 3. Enviamos los headers correctos
