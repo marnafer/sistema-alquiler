@@ -10,8 +10,9 @@ function sanitizarPropiedad(array $data): array {
             ? htmlspecialchars(trim($data['descripcion'])) 
             : null,
 
-        // Precio: IMPORTANTE usar FLOAT para no perder los centavos (decimal 12,2)
+        // Precio y expensas: IMPORTANTE usar FLOAT para no perder los centavos (decimal 12,2)
         'precio' => filter_var($data['precio'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
+        'expensas' => filter_var($data['expensas'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
 
         'direccion' => htmlspecialchars(trim($data['direccion'] ?? '')),
 

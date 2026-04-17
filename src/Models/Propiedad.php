@@ -14,7 +14,7 @@ class Propiedad extends Model
     // 2. Campos que permitís que se llenen (Mass Assignment)
     // Esto es por seguridad, para que el sanitizador y el modelo trabajen juntos
     protected $fillable = [
-        'titulo', 'descripcion', 'precio', 'direccion', 
+        'titulo', 'descripcion', 'precio', 'expensas', 'direccion', 
         'cantidad_ambientes', 'cantidad_dormitorios', 'cantidad_banos', 
         'capacidad', 'disponible', 'categoria_id', 
         'administrador_id', 'localidad_id'

@@ -32,6 +32,10 @@ function validarPropiedad(array $data): array {
         $errores['precio'] = "El precio debe ser un número positivo válido.";
     }
 
+    if (!is_numeric($data['expensas']) || $data['expensas'] < 0) {
+    $errores['expensas'] = "Las expensas deben ser un número (0 o más).";
+}
+
     // Validamos cantidades (TINYINT UNSIGNED en la DB)
     $campos_numericos = [
         'cantidad_ambientes'   => 'ambientes',
