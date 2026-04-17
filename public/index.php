@@ -77,22 +77,16 @@ if (strpos($path, '/propiedades') !== false) {
     } else {
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
-} else {
-    // 3. Si no es ninguna de las anteriores
-    renderError("Ruta no encontrada: " . $path, 404);
-}
-
-// Rutas Módulo Favoritos
-
-elseif (strpos($path, '/favoritos') !== false) {
+} elseif (strpos($path, '/favoritos') !== false) {
+    // Rutas Módulo Favoritos
     $routerPath = SRC_PATH . 'routes/favoritos_router.php'; // Creamos un router específico
     if (file_exists($routerPath)) {
         require_once $routerPath;
     } else {
         renderError("Archivo de rutas de favoritos no encontrado", 500);
     }
-}
-else {
+} else {
+    // Si no es ninguna de las anteriores
     renderError("Ruta no encontrada: " . $path, 404);
 }
 
