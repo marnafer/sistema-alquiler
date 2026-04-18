@@ -15,7 +15,7 @@ class Favorito extends Model {
     /**
      * Relación para traer los datos de la propiedad vinculada
      */
-    public function propiedad() { // <--- Yo dejaría 'propiedad' por simplicidad
+    public function propiedad() { 
         return $this->belongsTo(Propiedad::class, 'propiedad_id');
     }
 }
