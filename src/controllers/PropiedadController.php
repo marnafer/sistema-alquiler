@@ -5,7 +5,7 @@ namespace App\Controllers;
 require_once __DIR__ . '/../sanitizers/PropiedadSanitizer.php';
 require_once __DIR__ . '/../validators/PropiedadValidator.php';
 
-use App\Models\Propiedad; // marianofer98
+use App\Models\Propiedad; // marianofer98 1
 
 class PropiedadController {
 
