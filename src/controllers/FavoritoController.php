@@ -1,11 +1,11 @@
 <?php
+
 namespace App\Controllers;
 
-// Importamos los archivos de seguridad
-require_once __DIR__ . '/../sanitizers/FavoritoSanitizer.php';
-require_once __DIR__ . '/../validators/FavoritoValidator.php';
-
+// Importamos los modelos y las clases de seguridad
 use App\Models\Favorito;
+use App\Sanitizers\FavoritoSanitizer;
+use App\Validators\FavoritoValidator;
 
 class FavoritosController {
 
@@ -13,15 +13,16 @@ class FavoritosController {
      * Guarda una propiedad en favoritos
      */
     public function agregar() {
-        // 1. Limpiamos los IDs (Sanitización)
-        $datosLimpios = sanitizarFavorito($_POST);
+        // 1. Limpiamos los IDs usando la clase Sanitizer (MÃ©todo EstÃ¡tico)
+        $datosLimpios = FavoritoSanitizer::sanitizarFavorito($_POST);
 
-        // 2. Verificamos que los IDs existan y no sea un duplicado (Validación)
-        $errores = validarFavorito($datosLimpios);
+        // 2. Verificamos existencia y duplicados usando la clase Validator
+        $errores = FavoritoValidator::validarFavorito($datosLimpios);
 
         if (!empty($errores)) {
-            // Si hay errores, volvemos atrás con el primer error encontrado
-            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&status=error&msg=' . urlencode(current($errores)));
+            // Si hay errores, volvemos atrÃ¡s con el primer error encontrado
+            $msg = urlencode(current($errores));
+            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&status=error&msg=' . $msg);
             exit;
         }
 
@@ -32,7 +33,8 @@ class FavoritosController {
             header('Location: ' . $_SERVER['HTTP_REFERER'] . '&status=success');
             exit;
         } catch (\Exception $e) {
-            die("Error crítico al guardar: " . $e->getMessage());
+            // En producciÃ³n, esto deberÃ­a ir a un log, no a un die()
+            die("Error crÃ­tico al guardar: " . $e->getMessage());
         }
     }
 
@@ -41,18 +43,18 @@ class FavoritosController {
      */
     public function quitar() {
         // 1. Limpiamos los IDs
-        $datosLimpios = sanitizarFavorito($_POST);
+        $datosLimpios = FavoritoSanitizer::sanitizarFavorito($_POST);
 
         // 2. Verificamos que el favorito realmente exista para poder borrarlo
-        $errores = validarQuitarFavorito($datosLimpios);
+        $errores = FavoritoValidator::validarQuitarFavorito($datosLimpios);
 
         if (!empty($errores)) {
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            header('Location: ' . $_SERVER['HTTP_REFERER'] . '&status=error&msg=inexistente');
             exit;
         }
 
         try {
-            // 3. Eliminación lógica/física según modelo
+            // 3. EliminaciÃ³n fÃ­sica
             Favorito::where('usuario_id', $datosLimpios['usuario_id'])
                     ->where('propiedad_id', $datosLimpios['propiedad_id'])
                     ->delete();
@@ -65,19 +67,20 @@ class FavoritosController {
     }
 
     /**
-    * Lista los favoritos del usuario
-    */
+     * Lista los favoritos del usuario
+     */
     public function listar_Favoritos() {
-       $usuario_id = 1; // Provisorio hasta tener sesiones
+        $usuario_id = 1; // Provisorio hasta tener sesiones (ProgramaciÃ³n 2)
 
-    try {
-        // 'with' carga la relación para que no haga una consulta por cada fila después
-        $misFavoritos = Favorito::with('propiedad') 
-                                ->where('usuario_id', $usuario_id)
-                                ->get();
+        try {
+            // 'with' carga la relaciÃ³n para evitar el problema de consultas N+1
+            $misFavoritos = Favorito::with('propiedad') 
+                                    ->where('usuario_id', $usuario_id)
+                                    ->get();
 
-        require_once SRC_PATH . 'views/favoritos/favoritos_lista.php';
-    } catch (\Exception $e) {
-        die("Error: " . $e->getMessage());
+            require_once SRC_PATH . 'views/favoritos/favoritos_lista.php';
+        } catch (\Exception $e) {
+            die("Error al cargar favoritos: " . $e->getMessage());
+        }
     }
 }

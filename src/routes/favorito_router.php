@@ -1,6 +1,6 @@
 <?php
 /**
- * Router del Módulo de Favoritos
+ * Router del mÃ³dulo de Favoritos
  * Gestiona las acciones de agregar y quitar de la lista de deseos
  */
 
@@ -10,27 +10,27 @@ use App\Controllers\FavoritosController;
 
 $controller = new FavoritosController();
 
-// Obtenemos el método de la petición (POST en este caso para acciones)
+// Obtenemos el metodo de la peticion (POST en este caso para acciones)
 $method = $_SERVER['REQUEST_METHOD'];
 
-// --- Acción: Agregar a Favoritos ---
+// --- Accion: Agregar a Favoritos ---
 if ($path === '/favoritos/agregar') {
     if ($method === 'POST') {
         $controller->agregar();
     } else {
         http_response_code(405);
-        echo "Método no permitido para esta acción.";
+        echo "Mï¿½todo no permitido para esta acciï¿½n.";
     }
     exit;
 }
 
-// --- Acción: Quitar de Favoritos ---
+// --- Accion: Quitar de Favoritos ---
 if ($path === '/favoritos/quitar') {
     if ($method === 'POST') {
         $controller->quitar();
     } else {
         http_response_code(405);
-        echo "Método no permitido para esta acción.";
+        echo "Mï¿½todo no permitido para esta acciï¿½n.";
     }
     exit;
 }
