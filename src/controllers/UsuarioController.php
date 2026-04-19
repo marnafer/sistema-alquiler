@@ -2,71 +2,66 @@
 
 namespace App\Controllers;
 
-require_once __DIR__ . '/../sanitizers/UsuarioSanitizer.php';
-require_once __DIR__ . '/../validators/UsuarioValidator.php';
-
 use App\Models\Usuario;
+use App\Sanitizers\UsuarioSanitizer;
+use App\Validators\UsuarioValidator;
 
-Class UsuarioController {
+class UsuarioController {
 
     /**
-     * Muestra el formulario de carga
+     * Lista los usuarios en una vista de tabla
+     * Ruta: /usuarios
      */
-    public function mostrarFormulario() {
-        header('Content-Type: text/html; charset=utf-8');
-        require_once SRC_PATH . 'views/usuarios_form.php';
-        exit;
+    public function listarUsuarios() { 
+        try {
+            // Obtenemos todos los usuarios de la DB usando Eloquent
+            $usuarios = Usuario::all(); 
+
+            // Cargamos la vista de listado
+            require_once SRC_PATH . 'views/usuarios/usuarios_listar.php';
+        } catch (\Exception $e) {
+            die("Error al listar usuarios: " . $e->getMessage());
+        }
     }
 
     /**
-     * Lista los usuarios en formato JSON
+     * Muestra el formulario de registro
+     * Ruta: /usuarios/nuevo
      */
-    public function listarUsuarios() { 
-        if (ob_get_length()) ob_clean();
-
-        $respuesta = [
-            "ok" => true,
-            "mensaje" => "Listado de usuarios en construccion" 
-        ];
-
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($respuesta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit;
+    public function mostrarFormulario() {
+        $datos = [];
+        $errores = [];
+        require_once SRC_PATH . 'views/usuarios/usuarios_registrar.php';
     }
 
     /**
      * Procesa la creación de un usuario
+     * Ruta: /usuarios/guardar (POST)
      */
     public function crearUsuario() {
-        $input = $_POST; 
-        $datosLimpios = sanitizarUsuario($input);
-        $errores = validarUsuario($datosLimpios);
+        // 1. Sanitización
+        $datosLimpios = UsuarioSanitizer::sanitizarUsuario($_POST);
+        
+        // 2. Validación
+        $errores = UsuarioValidator::validarUsuario($datosLimpios);
 
         if (!empty($errores)) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $errores
-            ]);
+            $datos = $datosLimpios;
+            require_once SRC_PATH . 'views/usuarios/usuarios_registrar.php';
             return;
         }
 
         try {
-            $nuevoUsuario = Usuario::create($datosLimpios);
+            // 3. Persistencia
+            Usuario::create($datosLimpios);
 
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'message' => 'Usuario creado exitosamente',
-                'data' => $nuevoUsuario
-            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            // 4. Redirección al listado con mensaje de éxito
+            header('Location: /usuarios?status=success');
+            exit;
         } catch (\Exception $e) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error al guardar el usuario: ' . $e->getMessage()
-            ]);
+            $errores['db'] = "Error en la base de datos: " . $e->getMessage();
+            $datos = $datosLimpios;
+            require_once SRC_PATH . 'views/usuarios/usuarios_registrar.php';
         }
     }
 }
