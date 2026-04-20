@@ -55,6 +55,8 @@
         .navbar { border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .nav-link i { margin-right: 5px; }
     </style>
+    <!-- SweetAlert2 para notificaciones elegantes (API Mode) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
