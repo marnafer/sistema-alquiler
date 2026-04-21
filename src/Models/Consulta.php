@@ -7,7 +7,7 @@ namespace App\Models;
 
 use PDO;
 
-class ConsultaModel {
+class Consulta {
     
     private $db;
     

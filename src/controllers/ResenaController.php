@@ -1,37 +1,35 @@
 <?php
 /**
- * Controlador del módulo de Consultas
+ * Controlador de Reseñas
  * TODAS las respuestas son en JSON
  */
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/consulta_sanitizer.php';
+require_once SRC_PATH . 'sanitizers/resena_sanitizer.php';
+require_once SRC_PATH . 'validators/resena_validator.php';
 
+use App\Models\ResenaModel;
 
-use App\Models\Consulta;
-
-class ConsultaController {
+class ResenaController {
     
     private $model;
     
     public function __construct() {
-        $this->model = new Consulta();
+        $this->model = new ResenaModel();
         header('Content-Type: application/json');
     }
     
     /**
-     * Listar todas las consultas
-     * GET /api/consultas
+     * GET /api/resenas
      */
-    public function listar() {
+    public function index() {
         try {
-            $consultas = $this->model->listar();
-            
+            $resenas = $this->model->getAll();
             echo json_encode([
                 'success' => true,
-                'data' => $consultas,
-                'total' => count($consultas)
+                'data' => $resenas,
+                'total' => count($resenas)
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -43,30 +41,29 @@ class ConsultaController {
     }
     
     /**
-     * Obtener una consulta específica
-     * GET /api/consultas/{id}
+     * GET /api/resenas/{id}
      */
-    public function obtener($id) {
+    public function show($id) {
         try {
-            $resultadoId = validarIdConsultaRequerido($id);
-            if (!$resultadoId['success']) {
+            $validacion = validarSoloIdResena($id);
+            if (!$validacion['success']) {
                 http_response_code(400);
-                echo json_encode($resultadoId, JSON_UNESCAPED_UNICODE);
+                echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $consulta = $this->model->obtener($id);
+            $resena = $this->model->getById($id);
             
-            if ($consulta) {
+            if ($resena) {
                 echo json_encode([
                     'success' => true,
-                    'data' => $consulta
+                    'data' => $resena
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Consulta no encontrada'
+                    'error' => 'Reseña no encontrada'
                 ], JSON_UNESCAPED_UNICODE);
             }
         } catch (\Exception $e) {
@@ -79,17 +76,19 @@ class ConsultaController {
     }
     
     /**
-     * Listar consultas por propiedad
-     * GET /api/consultas/propiedad/{id}
+     * GET /api/resenas/propiedad/{id}
      */
-    public function listarPorPropiedad($propiedadId) {
+    public function getByPropiedad($propiedadId) {
         try {
-            $consultas = $this->model->listarPorPropiedad($propiedadId);
+            $resenas = $this->model->getByPropiedad($propiedadId);
+            $promedio = $this->model->getPromedioByPropiedad($propiedadId);
             
             echo json_encode([
                 'success' => true,
-                'data' => $consultas,
-                'total' => count($consultas),
+                'data' => $resenas,
+                'total' => count($resenas),
+                'promedio' => $promedio['promedio'],
+                'total_resenas' => $promedio['total'],
                 'propiedad_id' => $propiedadId
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
@@ -102,18 +101,17 @@ class ConsultaController {
     }
     
     /**
-     * Listar consultas por inquilino
-     * GET /api/consultas/inquilino/{id}
+     * GET /api/resenas/usuario/{id}
      */
-    public function listarPorInquilino($inquilinoId) {
+    public function getByUsuario($usuarioId) {
         try {
-            $consultas = $this->model->listarPorInquilino($inquilinoId);
+            $resenas = $this->model->getByUsuario($usuarioId);
             
             echo json_encode([
                 'success' => true,
-                'data' => $consultas,
-                'total' => count($consultas),
-                'inquilino_id' => $inquilinoId
+                'data' => $resenas,
+                'total' => count($resenas),
+                'usuario_id' => $usuarioId
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -125,63 +123,82 @@ class ConsultaController {
     }
     
     /**
-     * Crear una nueva consulta
-     * POST /api/consultas
+     * GET /api/resenas/estadisticas
      */
-    public function crear() {
+    public function getEstadisticas() {
+        try {
+            $estadisticas = $this->model->getEstadisticas();
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $estadisticas
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+    
+    /**
+     * POST /api/resenas
+     */
+    public function store() {
         $data = json_decode(file_get_contents('php://input'), true);
         
         if (!$data) {
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'error' => 'Datos inválidos o no proporcionados'
+                'error' => 'Datos inválidos'
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
-        // Validar datos
-        $resultadoValidacion = validarConsulta($data);
+        // Sanitizar
+        $datosSanitizados = sanitizarResena($data);
         
-        if (!$resultadoValidacion['success']) {
+        // Validar
+        $validacion = validarCrearResena($datosSanitizados);
+        if (!$validacion['success']) {
             http_response_code(400);
-            echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
+            echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
             return;
         }
         
         try {
-            // Verificar que la propiedad existe
-            $propiedad = $this->model->propiedadExiste($resultadoValidacion['data']['propiedad_id']);
-            if (!$propiedad) {
+            // Verificar que la reserva existe y está finalizada
+            if (!$this->model->reservaExistsAndFinalizada($datosSanitizados['reserva_id'])) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'La propiedad no existe o no está disponible'
+                    'error' => 'La reserva no existe o no está finalizada'
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            // Verificar que el inquilino existe
-            $inquilino = $this->model->inquilinoExiste($resultadoValidacion['data']['inquilino_id']);
-            if (!$inquilino) {
-                http_response_code(404);
+            // Verificar que no existe ya una reseña para esta reserva
+            if ($this->model->existePorReserva($datosSanitizados['reserva_id'])) {
+                http_response_code(409);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'El inquilino no existe'
+                    'error' => 'Ya existe una reseña para esta reserva'
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            // Crear consulta
-            $id = $this->model->crear($resultadoValidacion['data']);
-            $resultadoValidacion['data']['id'] = $id;
-            $resultadoValidacion['data']['fecha_consulta'] = date('Y-m-d H:i:s');
+            // Crear reseña
+            $id = $this->model->create($datosSanitizados);
+            $datosSanitizados['id'] = $id;
+            $datosSanitizados['fecha_publicacion'] = date('Y-m-d H:i:s');
             
             http_response_code(201);
             echo json_encode([
                 'success' => true,
-                'message' => 'Consulta creada exitosamente',
-                'data' => $resultadoValidacion['data']
+                'message' => 'Reseña creada exitosamente',
+                'data' => $datosSanitizados
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -193,47 +210,46 @@ class ConsultaController {
     }
     
     /**
-     * Actualizar una consulta
-     * PUT /api/consultas/{id}
+     * PUT /api/resenas/{id}
      */
-    public function actualizar($id) {
+    public function update($id) {
         $data = json_decode(file_get_contents('php://input'), true);
         
         if (!$data) {
             http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'error' => 'Datos inválidos o no proporcionados'
+                'error' => 'Datos inválidos'
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
         $data['id'] = $id;
-        $resultadoValidacion = validarConsulta($data);
+        $datosSanitizados = sanitizarResena($data);
         
-        if (!$resultadoValidacion['success']) {
+        $validacion = validarActualizarResena($datosSanitizados);
+        if (!$validacion['success']) {
             http_response_code(400);
-            echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
+            echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
             return;
         }
         
         try {
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
+            if (!$this->model->exists($id)) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Consulta no encontrada'
+                    'error' => 'Reseña no encontrada'
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $this->model->actualizar($id, $resultadoValidacion['data']);
+            $this->model->update($id, $datosSanitizados);
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Consulta actualizada exitosamente',
-                'data' => $resultadoValidacion['data']
+                'message' => 'Reseña actualizada exitosamente',
+                'data' => $datosSanitizados
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -245,33 +261,32 @@ class ConsultaController {
     }
     
     /**
-     * Eliminar una consulta (soft delete)
-     * DELETE /api/consultas/{id}
+     * DELETE /api/resenas/{id}
      */
-    public function eliminar($id) {
+    public function delete($id) {
+        $validacion = validarSoloIdResena($id);
+        
+        if (!$validacion['success']) {
+            http_response_code(400);
+            echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
         try {
-            $resultadoId = validarIdConsultaRequerido($id);
-            if (!$resultadoId['success']) {
-                http_response_code(400);
-                echo json_encode($resultadoId, JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
+            if (!$this->model->exists($id)) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Consulta no encontrada'
+                    'error' => 'Reseña no encontrada'
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $this->model->eliminar($id);
+            $this->model->delete($id);
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Consulta eliminada exitosamente'
+                'message' => 'Reseña eliminada exitosamente'
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
