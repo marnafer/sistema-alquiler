@@ -9,7 +9,7 @@ $controller = new PropiedadController(); // Instanciamos una sola vez
 // --- Ruta: /propiedades/nuevo ---
 if ($path === '/propiedades/nuevo') {
     if ($method === 'GET') {
-        $controller->mostrarFormulario(); // Llamada al método de la clase
+        $controller->mostrarFormulario(); // Llamada al metodo de la clase
     } else {
         http_response_code(405);
     }
@@ -29,7 +29,7 @@ if (trim($path) === '/propiedades') {
 
         default:
             http_response_code(405);
-            echo json_encode(["error" => "Método $method no permitido"]);
+            echo json_encode(["error" => "Mï¿½todo $method no permitido"]);
             break;
     }
     exit; 

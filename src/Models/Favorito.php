@@ -13,7 +13,7 @@ class Favorito extends Model {
     protected $fillable = ['usuario_id', 'propiedad_id'];
     
     /**
-     * Relación para traer los datos de la propiedad vinculada
+     * Relacion para traer los datos de la propiedad vinculada
      */
     public function propiedad() { 
         return $this->belongsTo(Propiedad::class, 'propiedad_id');

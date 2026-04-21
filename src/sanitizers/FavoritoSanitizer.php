@@ -1,11 +1,21 @@
 <?php
-/**
- * Limpia los IDs recibidos para asegurar que sean enteros
- */
-function sanitizarFavorito(array $data): array {
-    return [
-        // intval() convierte cualquier cosa extraña en un número entero o 0
-        'usuario_id'   => isset($data['usuario_id']) ? intval($data['usuario_id']) : 0,
-        'propiedad_id' => isset($data['propiedad_id']) ? intval($data['propiedad_id']) : 0
-    ];
+
+namespace App\Sanitizers;
+
+class FavoritoSanitizer {
+    
+    public static function sanitizarId($id) {
+        // Eliminamos caracteres no numÃ©ricos y forzamos a entero
+        return filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+    }
+    
+    /**
+     * Limpia los IDs recibidos para asegurar que sean enteros
+     */
+    public static function sanitizarFavorito(array $data): array {
+            return [
+                'usuario_id'   => isset($data['usuario_id']) ? self::sanitizarId($data['usuario_id']) : 0,
+                'propiedad_id' => isset($data['propiedad_id']) ? self::sanitizarId($data['propiedad_id']) : 0
+            ];
+    }
 }

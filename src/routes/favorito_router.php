@@ -1,7 +1,6 @@
 <?php
 /**
- * Router del Módulo de Favoritos
- * Gestiona las acciones de agregar y quitar de la lista de deseos
+ * Router RESTful del mÃ³dulo de Favoritos
  */
 
 require_once SRC_PATH . 'controllers/FavoritosController.php';
@@ -9,33 +8,34 @@ require_once SRC_PATH . 'controllers/FavoritosController.php';
 use App\Controllers\FavoritosController;
 
 $controller = new FavoritosController();
-
-// Obtenemos el método de la petición (POST en este caso para acciones)
 $method = $_SERVER['REQUEST_METHOD'];
 
-// --- Acción: Agregar a Favoritos ---
-if ($path === '/favoritos/agregar') {
+// 1. --- RUTA DE API CON ID: /api/favoritos/{id} ---
+// Debe ir primero porque es mÃ¡s especÃ­fica
+if (preg_match('#^/api/favoritos/([0-9]+)$#', $path, $matches)) {
+    $favoritoId = $matches[1];
+
+    if ($method === 'DELETE') {
+        $controller->quitar($favoritoId);
+    } else {
+        http_response_code(405);
+        echo json_encode(["error" => "Para un ID especÃ­fico solo se permite el mÃ©todo DELETE"]);
+    }
+    exit;
+}
+
+// 2. --- RUTA DE API GENERAL: /api/favoritos ---
+if ($path === '/api/favoritos') {
     if ($method === 'POST') {
         $controller->agregar();
     } else {
         http_response_code(405);
-        echo "Método no permitido para esta acción.";
+        echo json_encode(["error" => "MÃ©todo $method no permitido en esta ruta"]);
     }
     exit;
 }
 
-// --- Acción: Quitar de Favoritos ---
-if ($path === '/favoritos/quitar') {
-    if ($method === 'POST') {
-        $controller->quitar();
-    } else {
-        http_response_code(405);
-        echo "Método no permitido para esta acción.";
-    }
-    exit;
-}
-
-// --- Vista: Listado de Favoritos ---
+// 3. --- RUTA DE VISTA (HTML): /favoritos ---
 if ($path === '/favoritos') {
     if ($method === 'GET') {
         $controller->listar_Favoritos();
@@ -43,6 +43,4 @@ if ($path === '/favoritos') {
         http_response_code(405);
     }
     exit;
-
-   
 }

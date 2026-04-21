@@ -1,57 +1,63 @@
 <?php
 
+namespace App\Validators;
+
 use App\Models\Usuario;
 use App\Models\Propiedad;
 use App\Models\Favorito;
 
-/**
- * Valida la existencia y evita duplicados al agregar
- */
-function validarFavorito(array $data): array {
-    $errores = [];
 
-    // 1. Validación de existencia de IDs
-    if ($data['usuario_id'] <= 0) {
-        $errores['usuario_id'] = "ID de usuario inválido.";
-    } elseif (!Usuario::find($data['usuario_id'])) {
-        $errores['usuario_id'] = "El usuario no existe.";
+Class FavoritoValidator {
+
+    /**
+     * Valida la existencia y evita duplicados al agregar
+     */
+    public static function validarFavorito(array $data): array {
+        $errores = [];
+
+        // 1. Validaciï¿½n de existencia de IDs
+        if ($data['usuario_id'] <= 0) {
+            $errores['usuario_id'] = "ID de usuario invï¿½lido.";
+        } elseif (!Usuario::find($data['usuario_id'])) {
+            $errores['usuario_id'] = "El usuario no existe.";
+        }
+
+        if ($data['propiedad_id'] <= 0) {
+            $errores['propiedad_id'] = "ID de propiedad invï¿½lido.";
+        } elseif (!Propiedad::find($data['propiedad_id'])) {
+            $errores['propiedad_id'] = "La propiedad no existe o fue eliminada.";
+        }
+
+        // 2. Validaciï¿½n de Duplicados
+        if (empty($errores)) {
+            $existe = Favorito::where('usuario_id', $data['usuario_id'])
+                              ->where('propiedad_id', $data['propiedad_id'])
+                              ->first();
+            
+            if ($existe) {
+                $errores['duplicado'] = "Esta propiedad ya estï¿½ en tu lista de favoritos.";
+            }
+        }
+
+        return $errores;
     }
 
-    if ($data['propiedad_id'] <= 0) {
-        $errores['propiedad_id'] = "ID de propiedad inválido.";
-    } elseif (!Propiedad::find($data['propiedad_id'])) {
-        $errores['propiedad_id'] = "La propiedad no existe o fue eliminada.";
-    }
+    /**
+     * Valida que el favorito exista antes de intentar borrarlo
+     */
+    public static function validarQuitarFavorito(array $data): array {
+        $errores = [];
 
-    // 2. Validación de Duplicados
-    if (empty($errores)) {
+        // Verificamos si la relaciï¿½n existe en la tabla
+        // Usamos Favorito directamente porque ya estï¿½ en el 'use' superior
         $existe = Favorito::where('usuario_id', $data['usuario_id'])
                           ->where('propiedad_id', $data['propiedad_id'])
                           ->first();
         
-        if ($existe) {
-            $errores['duplicado'] = "Esta propiedad ya está en tu lista de favoritos.";
+        if (!$existe) {
+            $errores['inexistente'] = "El favorito que intentas quitar no existe.";
         }
+
+        return $errores;
     }
-
-    return $errores;
-}
-
-/**
- * Valida que el favorito exista antes de intentar borrarlo
- */
-function validarQuitarFavorito(array $data): array {
-    $errores = [];
-
-    // Verificamos si la relación existe en la tabla
-    // Usamos Favorito directamente porque ya está en el 'use' superior
-    $existe = Favorito::where('usuario_id', $data['usuario_id'])
-                      ->where('propiedad_id', $data['propiedad_id'])
-                      ->first();
-    
-    if (!$existe) {
-        $errores['inexistente'] = "El favorito que intentas quitar no existe.";
-    }
-
-    return $errores;
 }
