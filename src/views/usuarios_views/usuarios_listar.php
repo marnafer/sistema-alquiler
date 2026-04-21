@@ -1,59 +1,97 @@
 <?php 
-$tituloPagina = "Listado de Usuarios";
+$tituloPagina = "Gestión de Usuarios";
 include SRC_PATH . 'views/partials/header.php'; 
 ?>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Usuarios del Sistema</h2>
-        <a href="/usuarios/nuevo" class="btn btn-success">
-            <i class="bi bi-person-plus"></i> Nuevo Usuario
+        <h1><i class="bi bi-people-fill me-2"></i>Usuarios</h1>
+        <a href="/usuarios/nuevo" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
         </a>
     </div>
 
-    <?php if (isset($_GET['status']) && $_GET['status'] === 'success'): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            ¡Usuario creado con éxito!
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <div class="card shadow">
+    <div class="card shadow-sm border-0">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre Completo</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                        <th>Rol</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($usuarios as $u): ?>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td><?= $u->id ?></td>
-                            <td><?= htmlspecialchars($u->apellido . ", " . $u->nombre) ?></td>
-                            <td><?= htmlspecialchars($u->email) ?></td>
-                            <td><?= htmlspecialchars($u->telefono) ?></td>
-                            <td>
-                                <span class="badge bg-info text-dark">
-                                    <?= $u->rol_id == 1 ? 'Admin' : ($u->rol_id == 2 ? 'Empleado' : 'Cliente') ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a href="/logs-actividad/usuario?usuario_id=<?= $u->id ?>" class="btn btn-sm btn-outline-secondary" title="Ver Actividad">
-                                    <i class="bi bi-list-check"></i>
-                                </a>
-                            </td>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th class="text-end">Acciones</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($usuarios as $u): ?>
+                            <tr id="user-row-<?= $u->id ?>">
+                                <td class="align-middle fw-bold"><?= $u->id ?></td>
+                                <td class="align-middle"><?= htmlspecialchars($u->nombre) ?></td>
+                                <td class="align-middle"><?= htmlspecialchars($u->email) ?></td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-dark">
+                                        <?= $u->rol_id == 1 ? 'Administrador' : 'Usuario' ?>
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            onclick="eliminarUsuario(<?= $u->id ?>)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+async function eliminarUsuario(id) {
+    const confirmacion = await Swal.fire({
+        title: '¿Eliminar usuario?',
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true
+    });
+
+    if (!confirmacion.isConfirmed) return;
+
+    try {
+        const response = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+        const resultado = await response.json();
+
+        if (response.ok) {
+            // Borramos la fila del DOM con una pequeña transición
+            const fila = document.getElementById(`user-row-${id}`);
+            fila.style.opacity = '0';
+            setTimeout(() => fila.remove(), 300);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Eliminado',
+                text: resultado.message,
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        } else {
+            Swal.fire('Error', resultado.message, 'error');
+        }
+    } catch (error) {
+        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+    }
+}
+</script>
 
 <?php include SRC_PATH . 'views/partials/footer.php'; ?>

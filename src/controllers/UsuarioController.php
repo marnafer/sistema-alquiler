@@ -9,15 +9,12 @@ use App\Validators\UsuarioValidator;
 class UsuarioController {
 
     /**
-     * Lista los usuarios en una vista de tabla
-     * Ruta: /usuarios
+     * VISTA: Muestra la tabla de usuarios (HTML)
+     * Ruta: /usuarios (GET)
      */
     public function listarUsuarios() { 
         try {
-            // Obtenemos todos los usuarios de la DB usando Eloquent
             $usuarios = Usuario::all(); 
-
-            // Cargamos la vista de listado
             require_once SRC_PATH . 'views/usuarios/usuarios_listar.php';
         } catch (\Exception $e) {
             die("Error al listar usuarios: " . $e->getMessage());
@@ -25,8 +22,23 @@ class UsuarioController {
     }
 
     /**
-     * Muestra el formulario de registro
-     * Ruta: /usuarios/nuevo
+     * API: Retorna los datos de usuarios (JSON)
+     * Ruta: /api/usuarios (GET)
+     */
+    public function indexApi() {
+        header('Content-Type: application/json');
+        try {
+            // Seleccionamos campos seguros (sin password)
+            $usuarios = Usuario::all(['id', 'nombre', 'email', 'rol_id']);
+            echo json_encode(['status' => 'success', 'data' => $usuarios]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * VISTA: Muestra el formulario (HTML)
      */
     public function mostrarFormulario() {
         $datos = [];
@@ -35,33 +47,67 @@ class UsuarioController {
     }
 
     /**
-     * Procesa la creación de un usuario
-     * Ruta: /usuarios/guardar (POST)
+     * API: Procesa la creación (JSON)
+     * Ruta: /api/usuarios (POST)
      */
-    public function crearUsuario() {
+    public function guardar() {
+        header('Content-Type: application/json');
+
+        // Soporte para JSON crudo o FormData
+        $inputRaw = file_get_contents("php://input");
+        $inputData = json_decode($inputRaw, true) ?? $_POST;
+
         // 1. Sanitización
-        $datosLimpios = UsuarioSanitizer::sanitizarUsuario($_POST);
+        $datosLimpios = UsuarioSanitizer::sanitizarUsuario($inputData);
         
         // 2. Validación
         $errores = UsuarioValidator::validarUsuario($datosLimpios);
 
         if (!empty($errores)) {
-            $datos = $datosLimpios;
-            require_once SRC_PATH . 'views/usuarios/usuarios_registrar.php';
+            http_response_code(400); // Bad Request
+            echo json_encode(['status' => 'error', 'errors' => $errores]);
             return;
         }
 
         try {
-            // 3. Persistencia
-            Usuario::create($datosLimpios);
+            // Hash de contraseña antes de guardar (OBLIGATORIO en APIs)
+            if (isset($datosLimpios['password'])) {
+                $datosLimpios['password'] = password_hash($datosLimpios['password'], PASSWORD_BCRYPT);
+            }
 
-            // 4. Redirección al listado con mensaje de éxito
-            header('Location: /usuarios?status=success');
-            exit;
+            $usuario = Usuario::create($datosLimpios);
+
+            http_response_code(201); // Created
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Usuario creado exitosamente',
+                'data' => ['id' => $usuario->id, 'email' => $usuario->email]
+            ]);
         } catch (\Exception $e) {
-            $errores['db'] = "Error en la base de datos: " . $e->getMessage();
-            $datos = $datosLimpios;
-            require_once SRC_PATH . 'views/usuarios/usuarios_registrar.php';
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API: Elimina un usuario (JSON)
+     * Ruta: /api/usuarios/{id} (DELETE)
+     */
+    public function eliminar($id) {
+        header('Content-Type: application/json');
+        try {
+            $usuario = Usuario::find($id);
+            if (!$usuario) {
+                http_response_code(404);
+                echo json_encode(['status' => 'error', 'message' => 'Usuario no encontrado']);
+                return;
+            }
+
+            $usuario->delete();
+            echo json_encode(['status' => 'success', 'message' => "Usuario #$id eliminado"]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 }
