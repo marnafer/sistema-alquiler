@@ -3,15 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Categoria extends Model
 {
-    use SoftDeletes;
-
     protected $table = 'categorias';
-    protected $primaryKey = 'id';
     public $timestamps = false;
 
     protected $fillable = ['nombre'];
+
+    /**
+     * Relación: Una categoría tiene muchas propiedades.
+     */
+    public function propiedades(): HasMany
+    {
+        return $this->hasMany(Propiedad::class, 'categoria_id');
+    }
 }
