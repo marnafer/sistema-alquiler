@@ -80,8 +80,8 @@ if (strpos($path, '/propiedades') !== false) {
 } 
 // 3. Rutas Módulo Favoritos
 elseif (strpos($path, '/favoritos') !== false) {
-    $routerPath = SRC_PATH . 'routes/favorito_router.php'; // router específico
-
+    $routerPath = SRC_PATH . 'routes/favoritos_router.php'; // router específico
+>>>>>>> f3a750cb468128b30f69c55e17a28e7168fb2055
     if (file_exists($routerPath)) {
         require_once $routerPath;
     } else {
