@@ -13,7 +13,7 @@ class PropiedadController {
      */
     public function mostrarFormulario() {
         header('Content-Type: text/html; charset=utf-8');
-        require_once SRC_PATH . 'views/propiedades_form.php';
+        require_once SRC_PATH . 'views/propiedades_views/propiedades_form.php';
         exit;
     }
 
@@ -24,7 +24,8 @@ class PropiedadController {
         try {
             $propiedades = Propiedad::all();
             // Ajusta la ruta de la vista si tu estructura es distinta
-            require_once SRC_PATH . 'views/propiedades_listar.php';
+            header('Content-Type: text/html; charset=utf-8');
+            require_once SRC_PATH . 'views/propiedades_views/propiedades_listar.php';
         } catch (\Exception $e) {
             die("Error al listar propiedades: " . $e->getMessage());
         }

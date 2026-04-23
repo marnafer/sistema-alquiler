@@ -17,7 +17,7 @@ define('SRC_PATH', dirname(__DIR__) . '/src/');
 
 ini_set('display_errors', 1);
 
-header("Content-Type: application/json");
+// header("Content-Type: application/json");
 
 // --- CONFIGURACIÓN Y DETECCIÓN ---
 

@@ -8,7 +8,7 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons (Agregado para que funcionen los iconos de Favoritos, Usuarios y Logs) -->
+    <!-- Bootstrap Icons (Agregado para que funcionen los iconos de Favoritos y Propiedades) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <style>
@@ -71,9 +71,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/propiedades"><i class="bi bi-building"></i> Propiedades</a>
-                <a class="nav-link" href="/usuarios"><i class="bi bi-people"></i> Usuarios</a>
                 <a class="nav-link" href="/favoritos"><i class="bi bi-heart"></i> Favoritos</a>
-                <a class="nav-link" href="/logs-actividad"><i class="bi bi-journal-text"></i> Logs</a>
             </div>
         </div>
     </div>
