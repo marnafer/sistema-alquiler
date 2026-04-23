@@ -62,43 +62,65 @@ if ($path === '/health') {
 if ($path === '/') {
     renderJson([
         'message' => 'API Alquiler Permanente funcionando',
-        'endpoints' => ['/propiedades', '/health']
+        'endpoints' => ['/propiedades', '/api/localidades', '/api/logs', '/health']
     ]);
 }
 
 // 2. Rutas Módulo de Propiedades
-// Usamos strpos !== false para que tome /propiedades, /propiedades_form, etc.
 if (strpos($path, '/propiedades') !== false) {
-    $routerPath = SRC_PATH . 'routes/propiedad_router.php'; // router específico
-    
+    $routerPath = SRC_PATH . 'routes/propiedad_router.php';
     if (file_exists($routerPath)) {
         require_once $routerPath;
-        // Importante: propiedad_router.php debe gestionar el 404 interno si no coincide la sub-ruta
     } else {
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
-} 
+}
 // 3. Rutas Módulo Favoritos
 elseif (strpos($path, '/favoritos') !== false) {
-    $routerPath = SRC_PATH . 'routes/favoritos_router.php'; // router específico
->>>>>>> f3a750cb468128b30f69c55e17a28e7168fb2055
+    $routerPath = SRC_PATH . 'routes/favorito_router.php';
     if (file_exists($routerPath)) {
         require_once $routerPath;
     } else {
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
-} 
+}
 // 4. Rutas Módulo Usuarios
 elseif (strpos($path, '/usuarios') !== false) {
-    $routerPath = SRC_PATH . 'routes/usuario_router.php'; // router específico
-
+    $routerPath = SRC_PATH . 'routes/usuario_router.php';
     if (file_exists($routerPath)) {
         require_once $routerPath;
     } else {
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
-} 
-// 5. Si no es ninguna de las anteriores
+}
+// 5. Rutas Módulo Logs de Actividad
+elseif (strpos($path, '/logs') !== false || strpos($path, '/logs-actividad') !== false) {
+    $routerPath = SRC_PATH . 'routes/log_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
+}
+// 6. Rutas Módulo Localidades
+elseif (strpos($path, '/localidades') !== false) {
+    $routerPath = SRC_PATH . 'routes/localidad_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
+}
+// 7. Rutas Módulo Propiedad Imágenes (API y vistas)
+elseif (strpos($path, '/propiedad-imagenes') !== false || strpos($path, '/propiedades/imagenes') !== false) {
+    $routerPath = SRC_PATH . 'routes/propiedadImagen_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
+}
+// 8. Si no es ninguna de las anteriores
 else {
     renderError("Ruta no encontrada: " . $path, 404);
 }

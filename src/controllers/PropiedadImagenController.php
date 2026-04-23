@@ -10,6 +10,39 @@ use App\Validators\PropiedadImagenValidator;
 class PropiedadImagenController
 {
     /**
+     * VISTA HTML: Galería/listado de imágenes (GET /propiedades/imagenes)
+     */
+    public function listarVistas()
+    {
+        try {
+            $imagenes = PropiedadImagen::orderBy('id', 'desc')->get();
+            require_once SRC_PATH . 'views/propiedad_imagen_views/imagenes_listar.php';
+        } catch (\Exception $e) {
+            renderError("Error al cargar la galería: " . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * VISTA HTML: Mostrar detalle de imagen (GET /propiedades/imagenes/ver?id={id})
+     */
+    public function mostrarVista()
+    {
+        $id = PropiedadImagenSanitizer::sanitizeId($_GET['id'] ?? null);
+        if (!PropiedadImagenValidator::validateId($id)) {
+            renderError("ID inválido", 400);
+            return;
+        }
+
+        $imagen = PropiedadImagen::find($id);
+        if (!$imagen) {
+            renderError("Imagen no encontrada", 404);
+            return;
+        }
+
+        require_once SRC_PATH . 'views/propiedad_imagen_views/imagen_detalle.php';
+    }
+
+    /**
      * GET /api/propiedad-imagenes
      * Opcional: ?propiedad_id=
      */
