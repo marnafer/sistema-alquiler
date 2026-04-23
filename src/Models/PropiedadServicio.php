@@ -8,7 +8,7 @@ namespace App\Models;
 use PDO;
 use Exception;
 
-class PropiedadServicio {
+class PropiedadServicioModel {
     
     private $db;
     

@@ -108,25 +108,6 @@ class UsuarioController {
                 'success' => false,
                 'error' => 'Datos inválidos'
             ], JSON_UNESCAPED_UNICODE);
-     * API: Procesa la creación (JSON)
-     * Ruta: /api/usuarios (POST)
-     */
-    public function guardar() {
-        header('Content-Type: application/json');
-
-        // Soporte para JSON crudo o FormData
-        $inputRaw = file_get_contents("php://input");
-        $inputData = json_decode($inputRaw, true) ?? $_POST;
-
-        // 1. Sanitización
-        $datosLimpios = UsuarioSanitizer::sanitizarUsuario($inputData);
-        
-        // 2. Validación
-        $errores = UsuarioValidator::validarUsuario($datosLimpios);
-
-        if (!empty($errores)) {
-            http_response_code(400); // Bad Request
-            echo json_encode(['status' => 'error', 'errors' => $errores]);
             return;
         }
         
@@ -363,44 +344,6 @@ class UsuarioController {
                 'success' => false,
                 'error' => $e->getMessage()
             ], JSON_UNESCAPED_UNICODE);
-            // Hash de contraseña antes de guardar (OBLIGATORIO en APIs)
-            if (isset($datosLimpios['password'])) {
-                $datosLimpios['password'] = password_hash($datosLimpios['password'], PASSWORD_BCRYPT);
-            }
-
-            $usuario = Usuario::create($datosLimpios);
-
-            http_response_code(201); // Created
-            echo json_encode([
-                'status' => 'success',
-                'message' => 'Usuario creado exitosamente',
-                'data' => ['id' => $usuario->id, 'email' => $usuario->email]
-            ]);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * API: Elimina un usuario (JSON)
-     * Ruta: /api/usuarios/{id} (DELETE)
-     */
-    public function eliminar($id) {
-        header('Content-Type: application/json');
-        try {
-            $usuario = Usuario::find($id);
-            if (!$usuario) {
-                http_response_code(404);
-                echo json_encode(['status' => 'error', 'message' => 'Usuario no encontrado']);
-                return;
-            }
-
-            $usuario->delete();
-            echo json_encode(['status' => 'success', 'message' => "Usuario #$id eliminado"]);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 }
