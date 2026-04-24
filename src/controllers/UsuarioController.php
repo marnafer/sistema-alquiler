@@ -17,20 +17,15 @@ class UsuarioController {
     
     public function __construct() {
         $this->model = new Usuario();
-        // NO establecer cabecera JSON aquí para no romper las vistas HTML
     }
     
-    // -----------------------
-    // MÉTODOS API (JSON) - NOMBRES EN ESPAÑOL
-    // -----------------------
-
     /**
      * GET /api/usuarios
      */
-    public function indexApi() {
+    public function listarUsuariosApi() {
         header('Content-Type: application/json; charset=utf-8');
         try {
-            $usuarios = $this->model->getAll();
+            $usuarios = $this->model->obtenerTodos();
             echo json_encode([
                 'success' => true,
                 'data' => $usuarios,
@@ -58,7 +53,7 @@ class UsuarioController {
                 return;
             }
             
-            $usuario = $this->model->getById($id);
+            $usuario = $this->model->obtenerPorId($id);
             
             if ($usuario) {
                 echo json_encode([
@@ -87,7 +82,7 @@ class UsuarioController {
     public function obtenerPorRol($rolId) {
         header('Content-Type: application/json; charset=utf-8');
         try {
-            $usuarios = $this->model->getByRol($rolId);
+            $usuarios = $this->model->obtenerPorRol($rolId);
             echo json_encode([
                 'success' => true,
                 'data' => $usuarios,
@@ -132,7 +127,7 @@ class UsuarioController {
         
         try {
             // Verificar si ya existe el email
-            if ($this->model->existsByEmail($datosSanitizados['email'])) {
+            if ($this->model->existePorEmail($datosSanitizados['email'])) {
                 http_response_code(409);
                 echo json_encode([
                     'success' => false,
@@ -144,7 +139,7 @@ class UsuarioController {
             // Hashear contraseña
             $datosSanitizados['contrasena'] = password_hash($datosSanitizados['contrasena'], PASSWORD_DEFAULT);
             
-            $id = $this->model->create($datosSanitizados);
+            $id = $this->model->crear($datosSanitizados);
             unset($datosSanitizados['contrasena']);
             $datosSanitizados['id'] = $id;
             
@@ -196,7 +191,7 @@ class UsuarioController {
         }
         
         try {
-            if (!$this->model->exists($id)) {
+            if (!$this->model->existe($id)) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
@@ -206,7 +201,7 @@ class UsuarioController {
             }
             
             // Verificar email único
-            if (isset($datosSanitizados['email']) && $this->model->existsByEmail($datosSanitizados['email'], $id)) {
+            if (isset($datosSanitizados['email']) && $this->model->existePorEmail($datosSanitizados['email'], $id)) {
                 http_response_code(409);
                 echo json_encode([
                     'success' => false,
@@ -220,7 +215,7 @@ class UsuarioController {
                 $datosSanitizados['contrasena'] = password_hash($datosSanitizados['contrasena'], PASSWORD_DEFAULT);
             }
             
-            $this->model->update($id, $datosSanitizados);
+            $this->model->actualizar($id, $datosSanitizados);
             
             // Eliminar contraseña de la respuesta
             unset($datosSanitizados['contrasena']);
@@ -253,7 +248,7 @@ class UsuarioController {
         }
         
         try {
-            if (!$this->model->exists($id)) {
+            if (!$this->model->existe($id)) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
@@ -262,7 +257,7 @@ class UsuarioController {
                 return;
             }
             
-            $this->model->delete($id);
+            $this->model->eliminar($id);
             
             echo json_encode([
                 'success' => true,
@@ -306,7 +301,7 @@ class UsuarioController {
         }
         
         try {
-            $usuario = $this->model->verifyCredentials($email, $contrasena);
+            $usuario = $this->model->verificarCredenciales($email, $contrasena);
             
             if ($usuario) {
                 echo json_encode([
@@ -329,7 +324,7 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * POST /api/usuarios/restaurar/{id}
      */
@@ -344,7 +339,7 @@ class UsuarioController {
         }
         
         try {
-            $this->model->restore($id);
+            $this->model->restaurar($id);
             
             echo json_encode([
                 'success' => true,
@@ -359,27 +354,16 @@ class UsuarioController {
         }
     }
 
-    // -----------------------
-    // VISTAS (en español para el router)
-    // -----------------------
-
-    /**
-     * VISTA HTML: lista de usuarios (ruta /usuarios)
-     */
+    // Vistas HTML (en español para el router)
     public function listarUsuarios() {
-        // Intentamos cargar la vista HTML si existe; si no, devolvemos JSON
         if (file_exists(SRC_PATH . 'views/usuarios_views/usuarios_listar.php')) {
-            $usuarios = $this->model->getAll();
+            $usuarios = $this->model->obtenerTodos();
             require_once SRC_PATH . 'views/usuarios_views/usuarios_listar.php';
             return;
         }
-        // Fallback JSON
-        $this->indexApi();
+        $this->listarUsuariosApi();
     }
 
-    /**
-     * VISTA HTML: formulario (ruta /usuarios/nuevo)
-     */
     public function mostrarFormulario() {
         $datos = [];
         $errores = [];
@@ -387,7 +371,6 @@ class UsuarioController {
             require_once SRC_PATH . 'views/usuarios_views/usuarios_registrar.php';
             return;
         }
-        // Fallback JSON indicando que la vista no existe
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Vista de registro no encontrada'], JSON_UNESCAPED_UNICODE);
