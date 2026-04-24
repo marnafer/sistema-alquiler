@@ -17,7 +17,7 @@ date_default_timezone_set('America/Argentina/Buenos_Aires');
 // ============================================
 
 // Cambia esto según tu configuración
-$baseUrl = 'http://localhost';
+$baseUrl = 'http://localhost/sistema-alquiler';
 
 // Si tu proyecto está en subcarpeta, usa:
 // $baseUrl = 'http://localhost/sistema-alquiler/public';

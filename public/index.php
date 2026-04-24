@@ -141,6 +141,48 @@ elseif (strpos($path, '/propiedad-imagenes') !== false || strpos($path, '/propie
     } else {
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
+
+    // ----- Categorías  -----
+if (strpos($path, '/api/categorias') === 0) {
+    require_once SRC_PATH . 'routes/categoria_router.php';
+    exit;
+}
+
+// ----- Provincias  -----
+if (strpos($path, '/api/provincias') === 0) {
+    require_once SRC_PATH . 'routes/provincia_router.php';
+    exit;
+}
+
+// ----- Servicios  -----
+if (strpos($path, '/api/servicios') === 0) {
+    require_once SRC_PATH . 'routes/servicio_router.php';
+    exit;
+}
+
+// ----- Reservas  -----
+if (strpos($path, '/api/reservas') === 0) {
+    require_once SRC_PATH . 'routes/reserva_router.php';
+    exit;
+}
+
+// ----- Reseñas  -----
+if (strpos($path, '/api/resenas') === 0) {
+    require_once SRC_PATH . 'routes/resena_router.php';
+    exit;
+}
+
+// ----- Consultas  -----
+if (strpos($path, '/api/consultas') === 0) {
+    require_once SRC_PATH . 'routes/consulta_router.php';
+    exit;
+}
+
+// ----- Roles  -----
+if (strpos($path, '/api/roles') === 0) {
+    require_once SRC_PATH . 'routes/rol_router.php';
+    exit;
+}
 }
 // 8. Si no es ninguna de las anteriores
 else {
