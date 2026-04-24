@@ -1,198 +1,318 @@
 <?php
+/**
+ * Validador para la entidad Usuario
+ * SOLO valida los datos, NO sanitiza
+ */
 
-namespace App\Validators;
-
-use App\Models\Usuario;
-
-class UsuarioValidator
-{
-    /**
-     * Valida el payload de usuario.
-     * Retorna array con keys: success (bool), message (string), errors (array|null)
-     *
-     * @param array $data
-     * @param bool $requerirId
-     * @param bool $requerirContrasena
-     * @return array
-     */
-    public static function validarUsuario(array $data, bool $requerirId = false, bool $requerirContrasena = true): array
-    {
-        $errores = [];
-
-        // ID requerido (para updates)
-        if ($requerirId) {
-            if (!isset($data['id']) || !is_numeric($data['id']) || (int)$data['id'] <= 0) {
-                $errores['id'] = 'ID inválido o requerido.';
-            }
+/**
+ * Validar todos los datos de un usuario
+ */
+function validarUsuario($data, $requerirId = false, $requerirContrasena = true) {
+    $errores = [];
+    
+    // Validar ID (solo si se requiere)
+    if ($requerirId) {
+        $resultado = validarIdRequeridoUsuario($data['id'] ?? null, 'usuario');
+        if (!$resultado['valido']) {
+            $errores['id'] = $resultado['error'];
         }
-
-        // Nombre
-        $nombre = $data['nombre'] ?? null;
-        if (empty($nombre)) {
-            $errores['nombre'] = 'El nombre es requerido.';
-        } else {
-            $nombre = trim((string)$nombre);
-            $len = mb_strlen($nombre);
-            if ($len < 2) $errores['nombre'] = 'El nombre debe tener al menos 2 caracteres.';
-            elseif ($len > 50) $errores['nombre'] = 'El nombre no puede exceder 50 caracteres.';
-            elseif (!preg_match('/^[\p{L}\s]+$/u', $nombre)) $errores['nombre'] = 'El nombre solo puede contener letras y espacios.';
+    }
+    
+    // Validar nombre
+    $resultado = validarNombreUsuario($data['nombre'] ?? null);
+    if (!$resultado['valido']) {
+        $errores['nombre'] = $resultado['error'];
+    }
+    
+    // Validar apellido
+    $resultado = validarApellidoUsuario($data['apellido'] ?? null);
+    if (!$resultado['valido']) {
+        $errores['apellido'] = $resultado['error'];
+    }
+    
+    // Validar email
+    $resultado = validarEmailUsuario($data['email'] ?? null);
+    if (!$resultado['valido']) {
+        $errores['email'] = $resultado['error'];
+    }
+    
+    // Validar teléfono (opcional)
+    if (isset($data['telefono']) && !empty($data['telefono'])) {
+        $resultado = validarTelefonoUsuario($data['telefono']);
+        if (!$resultado['valido']) {
+            $errores['telefono'] = $resultado['error'];
         }
-
-        // Apellido
-        $apellido = $data['apellido'] ?? null;
-        if (empty($apellido)) {
-            $errores['apellido'] = 'El apellido es requerido.';
-        } else {
-            $apellido = trim((string)$apellido);
-            $len = mb_strlen($apellido);
-            if ($len < 2) $errores['apellido'] = 'El apellido debe tener al menos 2 caracteres.';
-            elseif ($len > 50) $errores['apellido'] = 'El apellido no puede exceder 50 caracteres.';
-            elseif (!preg_match('/^[\p{L}\s]+$/u', $apellido)) $errores['apellido'] = 'El apellido solo puede contener letras y espacios.';
+    }
+    
+    // Validar domicilio (opcional)
+    if (isset($data['domicilio']) && !empty($data['domicilio'])) {
+        $resultado = validarDomicilioUsuario($data['domicilio']);
+        if (!$resultado['valido']) {
+            $errores['domicilio'] = $resultado['error'];
         }
-
-        // Email
-        $email = $data['email'] ?? null;
-        if (empty($email)) {
-            $errores['email'] = 'El email es requerido.';
-        } else {
-            $email = trim((string)$email);
-            if (mb_strlen($email) > 100) {
-                $errores['email'] = 'El email no puede exceder 100 caracteres.';
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errores['email'] = 'El email no es válido.';
-            }
+    }
+    
+    // Validar contraseña (solo para creación)
+    if ($requerirContrasena) {
+        $resultado = validarContrasenaUsuario($data['contrasena'] ?? null);
+        if (!$resultado['valido']) {
+            $errores['contrasena'] = $resultado['error'];
         }
-
-        // Teléfono (opcional)
-        if (isset($data['telefono']) && $data['telefono'] !== '') {
-            $telefono = preg_replace('/[^0-9\+]/', '', (string)$data['telefono']);
-            if (mb_strlen($telefono) < 6) $errores['telefono'] = 'El teléfono debe tener al menos 6 dígitos.';
-            elseif (mb_strlen($telefono) > 15) $errores['telefono'] = 'El teléfono no puede exceder 15 dígitos.';
-        }
-
-        // Domicilio (opcional)
-        if (isset($data['domicilio']) && $data['domicilio'] !== '') {
-            $dom = trim((string)$data['domicilio']);
-            $len = mb_strlen($dom);
-            if ($len < 5) $errores['domicilio'] = 'El domicilio debe tener al menos 5 caracteres.';
-            elseif ($len > 100) $errores['domicilio'] = 'El domicilio no puede exceder 100 caracteres.';
-        }
-
-        // Contraseña
-        $contrasena = $data['contrasena'] ?? null;
-        if ($requerirContrasena) {
-            if (empty($contrasena)) {
-                $errores['contrasena'] = 'La contraseña es requerida.';
-            } else {
-                $len = mb_strlen((string)$contrasena);
-                if ($len < 6) $errores['contrasena'] = 'La contraseña debe tener al menos 6 caracteres.';
-                elseif ($len > 255) $errores['contrasena'] = 'La contraseña no puede exceder 255 caracteres.';
-            }
-        } elseif (!empty($contrasena)) {
-            $len = mb_strlen((string)$contrasena);
-            if ($len < 6) $errores['contrasena'] = 'La contraseña debe tener al menos 6 caracteres.';
-            elseif ($len > 255) $errores['contrasena'] = 'La contraseña no puede exceder 255 caracteres.';
-        }
-
-        // rol_id
-        if (!isset($data['rol_id']) || $data['rol_id'] === '' || !is_numeric($data['rol_id'])) {
-            $errores['rol_id'] = 'El rol es requerido y debe ser numérico.';
-        } else {
-            $rolesValidos = [1, 2]; // Ajustar si la BD tiene otros roles
-            if (!in_array((int)$data['rol_id'], $rolesValidos, true)) {
-                $errores['rol_id'] = 'Rol inválido.';
-            }
-        }
-
-        // Validaciones de unicidad / existencia en BD (solo si email presente y no hay errores previos en email)
-        if (empty($errores['email']) && !empty($email)) {
-            try {
-                $query = Usuario::where('email', $email);
-                // Si es update con id, excluir ese registro
-                if (!empty($data['id']) && is_numeric($data['id'])) {
-                    $query->where('id', '!=', (int)$data['id']);
-                }
-                $existe = $query->first();
-                if ($existe) {
-                    $errores['email'] = 'Este correo ya está registrado.';
-                }
-            } catch (\Throwable $e) {
-                // No fallamos la validación por error DB aquí; dejar que el controlador capture excepciones si ocurre
-            }
-        }
-
-        if (count($errores) > 0) {
-            return [
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $errores
-            ];
-        }
-
+    }
+    
+    // Validar rol_id
+    $resultado = validarRolIdUsuario($data['rol_id'] ?? null);
+    if (!$resultado['valido']) {
+        $errores['rol_id'] = $resultado['error'];
+    }
+    
+    // Retornar resultado
+    if (count($errores) > 0) {
         return [
-            'success' => true,
-            'message' => 'Validación exitosa',
-            'errors' => null
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $errores
         ];
     }
-
-    /**
-     * Validar solo ID
-     */
-    public static function validarSoloIdUsuario($id): array
-    {
-        if (!isset($id) || !is_numeric($id) || (int)$id <= 0) {
-            return [
-                'success' => false,
-                'message' => 'ID inválido',
-                'errors' => ['id' => 'ID inválido o requerido']
-            ];
-        }
-
-        return ['success' => true, 'message' => 'ID válido', 'errors' => null];
-    }
-
-    /**
-     * Validar email para login
-     */
-    public static function validarEmailLogin($email): array
-    {
-        $resultado = self::validarUsuario(['email' => $email], false, false);
-        if (!$resultado['success']) {
-            return [
-                'success' => false,
-                'message' => 'Email inválido',
-                'errors' => ['email' => $resultado['errors']['email'] ?? 'Email inválido']
-            ];
-        }
-        return ['success' => true, 'message' => 'Email válido', 'errors' => null];
-    }
+    
+    return [
+        'success' => true,
+        'message' => 'Validación exitosa',
+        'errors' => null
+    ];
 }
 
 /**
- * Wrappers procedurales para compatibilidad con código existente
+ * Validar ID requerido
  */
-function validarUsuario($data, $requerirId = false, $requerirContrasena = true)
-{
-    return \App\Validators\UsuarioValidator::validarUsuario($data, $requerirId, $requerirContrasena);
+function validarIdRequeridoUsuario($id, $campo = '') {
+    if ($id === null || $id === '') {
+        $mensaje = $campo ? "El ID de $campo es requerido" : "El ID es requerido";
+        return ['valido' => false, 'error' => $mensaje];
+    }
+    
+    if (!is_numeric($id)) {
+        $mensaje = $campo ? "El ID de $campo debe ser un número" : "El ID debe ser un número";
+        return ['valido' => false, 'error' => $mensaje];
+    }
+    
+    if ($id <= 0) {
+        $mensaje = $campo ? "El ID de $campo debe ser positivo" : "El ID debe ser positivo";
+        return ['valido' => false, 'error' => $mensaje];
+    }
+    
+    return ['valido' => true, 'error' => null];
 }
 
-function validarCrearUsuario($data)
-{
-    return \App\Validators\UsuarioValidator::validarUsuario($data, false, true);
+/**
+ * Validar nombre
+ */
+function validarNombreUsuario($nombre) {
+    if ($nombre === null || $nombre === '') {
+        return ['valido' => false, 'error' => 'El nombre es requerido'];
+    }
+    
+    $nombreLimpio = trim($nombre);
+    $longitud = strlen($nombreLimpio);
+    
+    if ($longitud < 2) {
+        return ['valido' => false, 'error' => 'El nombre debe tener al menos 2 caracteres'];
+    }
+    
+    if ($longitud > 50) {
+        return ['valido' => false, 'error' => 'El nombre no puede exceder los 50 caracteres'];
+    }
+    
+    if (!preg_match('/^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s]+$/u', $nombreLimpio)) {
+        return ['valido' => false, 'error' => 'El nombre solo puede contener letras y espacios'];
+    }
+    
+    return ['valido' => true, 'error' => null];
 }
 
-function validarActualizarUsuario($data, $requerirContrasena = false)
-{
-    return \App\Validators\UsuarioValidator::validarUsuario($data, true, $requerirContrasena);
+/**
+ * Validar apellido
+ */
+function validarApellidoUsuario($apellido) {
+    if ($apellido === null || $apellido === '') {
+        return ['valido' => false, 'error' => 'El apellido es requerido'];
+    }
+    
+    $apellidoLimpio = trim($apellido);
+    $longitud = strlen($apellidoLimpio);
+    
+    if ($longitud < 2) {
+        return ['valido' => false, 'error' => 'El apellido debe tener al menos 2 caracteres'];
+    }
+    
+    if ($longitud > 50) {
+        return ['valido' => false, 'error' => 'El apellido no puede exceder los 50 caracteres'];
+    }
+    
+    if (!preg_match('/^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s]+$/u', $apellidoLimpio)) {
+        return ['valido' => false, 'error' => 'El apellido solo puede contener letras y espacios'];
+    }
+    
+    return ['valido' => true, 'error' => null];
 }
 
-function validarSoloIdUsuario($id)
-{
-    return \App\Validators\UsuarioValidator::validarSoloIdUsuario($id);
+/**
+ * Validar email
+ */
+function validarEmailUsuario($email) {
+    if ($email === null || $email === '') {
+        return ['valido' => false, 'error' => 'El email es requerido'];
+    }
+    
+    $emailLimpio = trim($email);
+    
+    if (strlen($emailLimpio) > 100) {
+        return ['valido' => false, 'error' => 'El email no puede exceder los 100 caracteres'];
+    }
+    
+    if (!filter_var($emailLimpio, FILTER_VALIDATE_EMAIL)) {
+        return ['valido' => false, 'error' => 'El email no es válido'];
+    }
+    
+    return ['valido' => true, 'error' => null];
 }
 
-function validarEmailLogin($email)
-{
-    return \App\Validators\UsuarioValidator::validarEmailLogin($email);
+/**
+ * Validar teléfono
+ */
+function validarTelefonoUsuario($telefono) {
+    if ($telefono === null || $telefono === '') {
+        return ['valido' => true, 'error' => null];
+    }
+    
+    $telefonoLimpio = preg_replace('/[^0-9]/', '', $telefono);
+    
+    if (strlen($telefonoLimpio) < 6) {
+        return ['valido' => false, 'error' => 'El teléfono debe tener al menos 6 dígitos'];
+    }
+    
+    if (strlen($telefonoLimpio) > 15) {
+        return ['valido' => false, 'error' => 'El teléfono no puede exceder los 15 dígitos'];
+    }
+    
+    return ['valido' => true, 'error' => null];
+}
+
+/**
+ * Validar domicilio
+ */
+function validarDomicilioUsuario($domicilio) {
+    if ($domicilio === null || $domicilio === '') {
+        return ['valido' => true, 'error' => null];
+    }
+    
+    $domicilioLimpio = trim($domicilio);
+    $longitud = strlen($domicilioLimpio);
+    
+    if ($longitud < 5) {
+        return ['valido' => false, 'error' => 'El domicilio debe tener al menos 5 caracteres'];
+    }
+    
+    if ($longitud > 100) {
+        return ['valido' => false, 'error' => 'El domicilio no puede exceder los 100 caracteres'];
+    }
+    
+    return ['valido' => true, 'error' => null];
+}
+
+/**
+ * Validar contraseña
+ */
+function validarContrasenaUsuario($contrasena) {
+    if ($contrasena === null || $contrasena === '') {
+        return ['valido' => false, 'error' => 'La contraseña es requerida'];
+    }
+    
+    $longitud = strlen($contrasena);
+    
+    if ($longitud < 6) {
+        return ['valido' => false, 'error' => 'La contraseña debe tener al menos 6 caracteres'];
+    }
+    
+    if ($longitud > 255) {
+        return ['valido' => false, 'error' => 'La contraseña no puede exceder los 255 caracteres'];
+    }
+    
+    return ['valido' => true, 'error' => null];
+}
+
+/**
+ * Validar rol ID
+ */
+function validarRolIdUsuario($rolId) {
+    if ($rolId === null || $rolId === '') {
+        return ['valido' => false, 'error' => 'El rol es requerido'];
+    }
+    
+    if (!is_numeric($rolId)) {
+        return ['valido' => false, 'error' => 'El rol debe ser un número'];
+    }
+    
+    $rolesValidos = [1, 2, 3];
+    if (!in_array($rolId, $rolesValidos)) {
+        return ['valido' => false, 'error' => 'Rol inválido'];
+    }
+    
+    return ['valido' => true, 'error' => null];
+}
+
+/**
+ * Validar para crear nuevo usuario
+ */
+function validarCrearUsuario($data) {
+    return validarUsuario($data, false, true);
+}
+
+/**
+ * Validar para actualizar usuario existente
+ */
+function validarActualizarUsuario($data, $requerirContrasena = false) {
+    return validarUsuario($data, true, $requerirContrasena);
+}
+
+/**
+ * Validar solo ID
+ */
+function validarSoloIdUsuario($id) {
+    $resultado = validarIdRequeridoUsuario($id, 'usuario');
+    
+    if (!$resultado['valido']) {
+        return [
+            'success' => false,
+            'message' => 'ID inválido',
+            'errors' => ['id' => $resultado['error']]
+        ];
+    }
+    
+    return [
+        'success' => true,
+        'message' => 'ID válido',
+        'errors' => null
+    ];
+}
+
+/**
+ * Validar solo email
+ */
+function validarEmailLoginUsuario($email) {
+    $resultado = validarEmailUsuario($email);
+    
+    if (!$resultado['valido']) {
+        return [
+            'success' => false,
+            'message' => 'Email inválido',
+            'errors' => ['email' => $resultado['error']]
+        ];
+    }
+    
+    return [
+        'success' => true,
+        'message' => 'Email válido',
+        'errors' => null
+    ];
 }
