@@ -6,8 +6,8 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/usuario_sanitizer.php';
-require_once SRC_PATH . 'validators/usuario_validator.php';
+require_once SRC_PATH . 'sanitizers/UsuarioSanitizer.php';
+require_once SRC_PATH . 'validators/UsuarioValidator.php';
 
 use App\Models\Usuario;
 
