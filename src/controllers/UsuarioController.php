@@ -1,7 +1,7 @@
 <?php
 /**
  * Controlador de Usuarios
- * TODAS las respuestas son en JSON
+ * Maneja API JSON y vistas HTML.
  */
 
 namespace App\Controllers;
@@ -17,13 +17,18 @@ class UsuarioController {
     
     public function __construct() {
         $this->model = new Usuario();
-        header('Content-Type: application/json');
+        // NO establecer cabecera JSON aquí para no romper las vistas HTML
     }
     
+    // -----------------------
+    // MÉTODOS API (JSON) - NOMBRES EN ESPAÑOL
+    // -----------------------
+
     /**
      * GET /api/usuarios
      */
-    public function index() {
+    public function indexApi() {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $usuarios = $this->model->getAll();
             echo json_encode([
@@ -39,11 +44,12 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/usuarios/{id}
      */
-    public function show($id) {
+    public function mostrar($id) {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $validacion = validarSoloIdUsuario($id);
             if (!$validacion['success']) {
@@ -74,11 +80,12 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/usuarios/rol/{rolId}
      */
-    public function getByRol($rolId) {
+    public function obtenerPorRol($rolId) {
+        header('Content-Type: application/json; charset=utf-8');
         try {
             $usuarios = $this->model->getByRol($rolId);
             echo json_encode([
@@ -95,11 +102,11 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * POST /api/usuarios
      */
-    public function store() {
+    public function guardar() {
         header('Content-Type: application/json; charset=utf-8');
         $data = json_decode(file_get_contents('php://input'), true);
         
@@ -155,11 +162,12 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * PUT /api/usuarios/{id}
      */
-    public function update($id) {
+    public function actualizar($id) {
+        header('Content-Type: application/json; charset=utf-8');
         $data = json_decode(file_get_contents('php://input'), true);
         
         if (!$data) {
@@ -230,11 +238,12 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * DELETE /api/usuarios/{id}
      */
-    public function delete($id) {
+    public function eliminar($id) {
+        header('Content-Type: application/json; charset=utf-8');
         $validacion = validarSoloIdUsuario($id);
         
         if (!$validacion['success']) {
@@ -267,11 +276,12 @@ class UsuarioController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * POST /api/usuarios/login
      */
     public function login() {
+        header('Content-Type: application/json; charset=utf-8');
         $data = json_decode(file_get_contents('php://input'), true);
         
         if (!$data || !isset($data['email']) || !isset($data['contrasena'])) {
@@ -323,7 +333,8 @@ class UsuarioController {
     /**
      * POST /api/usuarios/restaurar/{id}
      */
-    public function restore($id) {
+    public function restaurar($id) {
+        header('Content-Type: application/json; charset=utf-8');
         $validacion = validarSoloIdUsuario($id);
         
         if (!$validacion['success']) {
@@ -346,5 +357,39 @@ class UsuarioController {
                 'error' => $e->getMessage()
             ], JSON_UNESCAPED_UNICODE);
         }
+    }
+
+    // -----------------------
+    // VISTAS (en español para el router)
+    // -----------------------
+
+    /**
+     * VISTA HTML: lista de usuarios (ruta /usuarios)
+     */
+    public function listarUsuarios() {
+        // Intentamos cargar la vista HTML si existe; si no, devolvemos JSON
+        if (file_exists(SRC_PATH . 'views/usuarios_views/usuarios_listar.php')) {
+            $usuarios = $this->model->getAll();
+            require_once SRC_PATH . 'views/usuarios_views/usuarios_listar.php';
+            return;
+        }
+        // Fallback JSON
+        $this->indexApi();
+    }
+
+    /**
+     * VISTA HTML: formulario (ruta /usuarios/nuevo)
+     */
+    public function mostrarFormulario() {
+        $datos = [];
+        $errores = [];
+        if (file_exists(SRC_PATH . 'views/usuarios_views/usuarios_registrar.php')) {
+            require_once SRC_PATH . 'views/usuarios_views/usuarios_registrar.php';
+            return;
+        }
+        // Fallback JSON indicando que la vista no existe
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Vista de registro no encontrada'], JSON_UNESCAPED_UNICODE);
     }
 }
