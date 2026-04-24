@@ -142,52 +142,61 @@ elseif (strpos($path, '/propiedad-imagenes') !== false || strpos($path, '/propie
         renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
     }
 
-    // ----- Categorías  -----
-if (strpos($path, '/api/categorias') === 0) {
-    require_once SRC_PATH . 'routes/categoria_router.php';
-    exit;
-}
+ } elseif (strpos($path, '/api/categorias') !== false) {
+    $routerPath = SRC_PATH . 'routes/categoria_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Provincias  -----
-if (strpos($path, '/api/provincias') === 0) {
-    require_once SRC_PATH . 'routes/provincia_router.php';
-    exit;
-}
+} elseif (strpos($path, '/api/provincias') !== false) {
+    $routerPath = SRC_PATH . 'routes/provincia_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Servicios  -----
-if (strpos($path, '/api/servicios') === 0) {
-    require_once SRC_PATH . 'routes/servicio_router.php';
-    exit;
-}
+} elseif (strpos($path, '/api/servicios') !== false) {
+    $routerPath = SRC_PATH . 'routes/servicio_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Reservas  -----
-if (strpos($path, '/api/reservas') === 0) {
-    require_once SRC_PATH . 'routes/reserva_router.php';
-    exit;
-}
+} elseif (strpos($path, '/api/reservas') !== false) {
+    $routerPath = SRC_PATH . 'routes/reserva_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Reseñas  -----
-if (strpos($path, '/api/resenas') === 0) {
-    require_once SRC_PATH . 'routes/resena_router.php';
-    exit;
-}
+} elseif (strpos($path, '/api/resenas') !== false) {
+    $routerPath = SRC_PATH . 'routes/resena_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Consultas  -----
-if (strpos($path, '/api/consultas') === 0) {
-    require_once SRC_PATH . 'routes/consulta_router.php';
-    exit;
-}
+} elseif (strpos($path, '/api/consultas') !== false) {
+    $routerPath = SRC_PATH . 'routes/consulta_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
-// ----- Roles  -----
-if (strpos($path, '/api/roles') === 0) {
-    require_once SRC_PATH . 'routes/rol_router.php';
-    exit;
-}
-}
-// 8. Si no es ninguna de las anteriores
-else {
-    renderError("Ruta no encontrada: " . $path, 404);
-}
+} elseif (strpos($path, '/api/roles') !== false) {
+    $routerPath = SRC_PATH . 'routes/rol_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado en: " . $routerPath, 500);
+    }
 
 // --- FUNCIONES AUXILIARES ---
 
@@ -201,3 +210,4 @@ function renderJson(array $data, int $code = 200): void {
 function renderError(string $message, int $code): void {
     renderJson(["error" => $message, "path_detectado" => $GLOBALS['path'] ?? null], $code);
 }
+} 

@@ -17,7 +17,7 @@ date_default_timezone_set('America/Argentina/Buenos_Aires');
 // ============================================
 
 // Cambia esto según tu configuración
-$baseUrl = 'http://localhost/sistema-alquiler';
+$baseUrl = 'http://localhost/sistema-alquiler/public';
 
 // Si tu proyecto está en subcarpeta, usa:
 // $baseUrl = 'http://localhost/sistema-alquiler/public';
@@ -27,19 +27,19 @@ $baseUrl = 'http://localhost/sistema-alquiler';
 // ============================================
 
 $entidades = [
-    'Categorías' => '/api/categorias',
-    'Provincias' => '/api/provincias',
+    'Categorías' => '/api/categoria',
+    'Provincias' => '/api/provincia',
     'Localidades' => '/api/localidades',
     'Usuarios' => '/api/usuarios',
     'Propiedades' => '/api/propiedades',
-    'Servicios' => '/api/servicios',
+    'Servicios' => '/api/servicio',
     'Propiedad Servicio' => '/api/propiedades-servicios',
-    'Reservas' => '/api/reservas',
-    'Reseñas' => '/api/resenas',
-    'Consultas' => '/api/consultas',
+    'Reservas' => '/api/reserva',
+    'Reseñas' => '/api/resena',
+    'Consultas' => '/api/consulta',
     'Favoritos' => '/api/favoritos',
     'Logs Actividad' => '/api/logs-actividad',
-    'Roles' => '/api/roles',
+    'Roles' => '/api/rol',
     'Propiedad Imagen' => '/api/propiedades-imagen'
 ];
 
