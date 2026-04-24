@@ -5,20 +5,20 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 // Creamos la instancia del Capsule Manager
 $capsule = new Capsule;
 
-// Configuramos los datos de conexión
+// Configuramos los datos de conexiï¿½n
 $capsule->addConnection([
     'driver'    => 'mysql',
     'host'      => 'localhost',
-    'database'  => 'sistema_alquiler_db', // <-- Poné el nombre exacto de tu DB aquí
+    'database'  => 'sistema_alquiler_db', // <-- Ponï¿½ el nombre exacto de tu DB aquï¿½
     'username'  => 'root',                // Usuario de XAMPP
-    'password'  => '',                    // Contraseña de XAMPP (suele estar vacía)
+    'password'  => '',                    // Contraseï¿½a de XAMPP (suele estar vacï¿½a)
     'charset'   => 'utf8',
     'collation' => 'utf8_unicode_ci',
     'prefix'    => '',
 ]);
 
 // SetAsGlobal permite que Capsule funcione como un "Singleton"
-// para que puedas usarlo en cualquier parte del código
+// para que puedas usarlo en cualquier parte del cï¿½digo
 $capsule->setAsGlobal();
 
 // Inicializamos Eloquent
