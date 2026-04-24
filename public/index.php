@@ -1,5 +1,6 @@
 <?php
 
+
 declare(strict_types=1);
 
 // Cargamos el Autoload de Composer
@@ -45,6 +46,27 @@ if (strpos($path_bruto, '/public') === 0) {
 
 // 4. NORMALIZACIÓN
 $path = '/' . trim((string)$path_bruto, "/");
+
+
+// Agregar esto AL PRINCIPIO del archivo index.php
+
+
+// Cargar la clase Debugger
+require_once dirname(__DIR__) . '/src/debug/Debugger.php';
+
+use App\Debug\Debugger;
+
+// Activar debug SOLO en desarrollo (localhost)
+// Esto evita que en producción se muestren errores
+if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
+    Debugger::setEnabled(true);           // Activar registro de logs
+    Debugger::enableErrorReporting();     // Mostrar errores en pantalla
+}
+
+// Registrar TODA la petición HTTP (método, URL, headers, datos)
+// Esto guarda en debug.log cada vez que alguien visita el sitio
+Debugger::request();
+
 
 // --- FIN DE DETECCIÓN ---
 
