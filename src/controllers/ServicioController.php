@@ -6,8 +6,8 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/servicio_sanitizer.php';
-require_once SRC_PATH . 'validators/servicio_validator.php';
+require_once SRC_PATH . 'sanitizers/ServicioSanitizer.php';
+require_once SRC_PATH . 'validators/ServicioValidator.php';
 
 use App\Models\Servicio;
 

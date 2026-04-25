@@ -6,9 +6,11 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/categoria_sanitizer.php';
+require_once SRC_PATH . 'sanitizers/CategoriaSanitizer.php';
+require_once SRC_PATH . 'validators/CategoriaValidator.php';
 
 use App\Models\Categoria;
+use Exception;
 
 class CategoriaController {
     
@@ -25,18 +27,19 @@ class CategoriaController {
      */
     public function listar() {
         try {
-            $categorias = $this->model->listar();
+            // Eloquent: all() en lugar de listar()
+            $categorias = Categoria::all();
             echo json_encode([
                 'success' => true,
                 'data' => $categorias,
                 'total' => count($categorias)
-            ]);
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
     
@@ -46,25 +49,26 @@ class CategoriaController {
      */
     public function obtener($id) {
         try {
-            $categoria = $this->model->obtener($id);
+            // Eloquent: find() en lugar de obtener()
+            $categoria = Categoria::find($id);
             if ($categoria) {
                 echo json_encode([
                     'success' => true,
                     'data' => $categoria
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Categoría no encontrada'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
             }
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
     
@@ -80,7 +84,7 @@ class CategoriaController {
             echo json_encode([
                 'success' => false,
                 'error' => 'Datos inválidos o no proporcionados'
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
@@ -91,36 +95,37 @@ class CategoriaController {
             echo json_encode([
                 'success' => false,
                 'errors' => $resultado['errors']
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
         try {
-            // Verificar si ya existe
-            if ($this->model->existeNombre($resultado['data']['nombre'])) {
+            // Verificar si ya existe usando Eloquent
+            $existe = Categoria::where('nombre', $resultado['data']['nombre'])->exists();
+            if ($existe) {
                 http_response_code(409);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Ya existe una categoría con este nombre'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $id = $this->model->crear($resultado['data']);
-            $resultado['data']['id'] = $id;
+            // Eloquent: create()
+            $categoria = Categoria::create($resultado['data']);
             
             http_response_code(201);
             echo json_encode([
                 'success' => true,
                 'message' => 'Categoría creada exitosamente',
-                'data' => $resultado['data']
-            ]);
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+                'data' => $categoria
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
     
@@ -136,7 +141,7 @@ class CategoriaController {
             echo json_encode([
                 'success' => false,
                 'error' => 'Datos inválidos o no proporcionados'
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
@@ -148,44 +153,50 @@ class CategoriaController {
             echo json_encode([
                 'success' => false,
                 'errors' => $resultado['errors']
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
         
         try {
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
+            // Eloquent: find()
+            $categoria = Categoria::find($id);
+            
+            if (!$categoria) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Categoría no encontrada'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
             // Verificar si el nombre ya existe en otra categoría
-            if ($this->model->existeNombreExcepto($resultado['data']['nombre'], $id)) {
+            $existe = Categoria::where('nombre', $resultado['data']['nombre'])
+                              ->where('id', '!=', $id)
+                              ->exists();
+            if ($existe) {
                 http_response_code(409);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Ya existe otra categoría con este nombre'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $this->model->actualizar($id, $resultado['data']);
+            // Eloquent: update()
+            $categoria->update($resultado['data']);
             
             echo json_encode([
                 'success' => true,
                 'message' => 'Categoría actualizada exitosamente',
-                'data' => $resultado['data']
-            ]);
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+                'data' => $categoria
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
     
@@ -195,38 +206,41 @@ class CategoriaController {
      */
     public function eliminar($id) {
         try {
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
+            // Eloquent: find()
+            $categoria = Categoria::find($id);
+            
+            if (!$categoria) {
                 http_response_code(404);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Categoría no encontrada'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            // Verificar si tiene propiedades asociadas
-            if ($this->model->tienePropiedadesAsociadas($id)) {
+            // Verificar si tiene propiedades asociadas usando Eloquent
+            if ($categoria->propiedades()->count() > 0) {
                 http_response_code(409);
                 echo json_encode([
                     'success' => false,
                     'error' => 'No se puede eliminar la categoría porque tiene propiedades asociadas'
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $this->model->eliminar($id);
+            // Eloquent: delete()
+            $categoria->delete();
             
             echo json_encode([
                 'success' => true,
                 'message' => 'Categoría eliminada exitosamente'
-            ]);
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
     
@@ -236,7 +250,8 @@ class CategoriaController {
      */
     public function listarVista() {
         try {
-            $categorias = $this->model->listar();
+            // Eloquent: all()
+            $categorias = Categoria::all();
             
             echo json_encode([
                 'success' => true,
@@ -244,13 +259,13 @@ class CategoriaController {
                 'data' => $categorias,
                 'total' => count($categorias),
                 'timestamp' => date('Y-m-d H:i:s')
-            ]);
-        } catch (\Exception $e) {  // ← Agregar \ antes de Exception
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
 }

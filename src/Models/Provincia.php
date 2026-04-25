@@ -1,124 +1,92 @@
 <?php
-/**
- * Modelo de Provincias (versión sencilla)
- */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
 
-class Provincia {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
-    }
-    
+class Provincia extends Model
+{
+    protected $table = 'provincias';
+    public $timestamps = false;
+
+    protected $fillable = ['nombre'];
+
     /**
-     * Obtener todas las provincias
+     * Relación: Una provincia tiene muchas localidades.
      */
-    public function getAll() {
-        $query = "SELECT * FROM provincias ORDER BY nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function localidades()
+    {
+        return $this->hasMany(Localidad::class, 'provincia_id');
     }
-    
+
+    /**
+     * Obtener todas las provincias ordenadas por nombre
+     */
+    public static function getAll()
+    {
+        return self::orderBy('nombre', 'asc')->get();
+    }
+
     /**
      * Obtener una provincia por ID
      */
-    public function getById($id) {
-        $query = "SELECT * FROM provincias WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getById($id)
+    {
+        return self::find($id);
     }
-    
+
     /**
      * Crear una nueva provincia
      */
-    public function create($data) {
-        $query = "INSERT INTO provincias (nombre) VALUES (:nombre)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':nombre' => $data['nombre']]);
-        return $this->db->lastInsertId();
+    public static function createProvincia($data)
+    {
+        return self::create($data);
     }
-    
+
     /**
-     * Actualizar una provincia
+     * Verificar si existe una provincia por ID
      */
-    public function update($id, $data) {
-        $query = "UPDATE provincias SET nombre = :nombre WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':nombre' => $data['nombre'],
-            ':id' => $id
-        ]);
+    public static function exists($id)
+    {
+        return self::where('id', $id)->exists();
     }
-    
-    /**
-     * Eliminar una provincia
-     */
-    public function delete($id) {
-        $query = "DELETE FROM provincias WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
-    }
-    
-    /**
-     * Verificar si existe una provincia
-     */
-    public function exists($id) {
-        $query = "SELECT id FROM provincias WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
-    }
-    
+
     /**
      * Verificar si ya existe una provincia con el mismo nombre
      */
-    public function existsByNombre($nombre, $excluirId = null) {
+    public static function existsByNombre($nombre, $excluirId = null)
+    {
+        $query = self::where('nombre', $nombre);
+        
         if ($excluirId) {
-            $query = "SELECT id FROM provincias WHERE nombre = :nombre AND id != :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':nombre' => $nombre,
-                ':id' => $excluirId
-            ]);
-        } else {
-            $query = "SELECT id FROM provincias WHERE nombre = :nombre";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':nombre' => $nombre]);
+            $query->where('id', '!=', $excluirId);
         }
-        return $stmt->rowCount() > 0;
+        
+        return $query->exists();
     }
-    
+
     /**
      * Verificar si tiene localidades asociadas
      */
-    public function hasLocalidades($id) {
-        $query = "SELECT COUNT(*) as total FROM localidades WHERE provincia_id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] > 0;
+    public function hasLocalidades()
+    {
+        return $this->localidades()->count() > 0;
     }
-    
+
     /**
      * Obtener provincias con conteo de localidades
      */
-    public function getAllWithCount() {
-        $query = "SELECT p.*, COUNT(l.id) as total_localidades 
-                  FROM provincias p
-                  LEFT JOIN localidades l ON p.id = l.provincia_id
-                  GROUP BY p.id
-                  ORDER BY p.nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAllWithCount()
+    {
+        return self::withCount('localidades')
+            ->orderBy('nombre', 'asc')
+            ->get()
+            ->map(function($provincia) {
+                return [
+                    'id' => $provincia->id,
+                    'nombre' => $provincia->nombre,
+                    'total_localidades' => $provincia->localidades_count
+                ];
+            });
     }
 }
