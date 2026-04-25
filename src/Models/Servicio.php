@@ -1,164 +1,129 @@
 <?php
-/**
- * Modelo de Servicios (versión sencilla)
- */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
 
-class Servicio {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
-    }
-    
+class Servicio extends Model
+{
+    protected $table = 'servicios';
+    public $timestamps = false;
+
+    protected $fillable = ['nombre'];
+
     /**
-     * Obtener todos los servicios
+     * Relación: Un servicio pertenece a muchas propiedades (muchos a muchos)
      */
-    public function getAll() {
-        $query = "SELECT * FROM servicios ORDER BY nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function propiedades()
+    {
+        return $this->belongsToMany(Propiedad::class, 'propiedad_servicio', 'servicio_id', 'propiedad_id');
     }
-    
+
+    /**
+     * Obtener todos los servicios ordenados por nombre
+     */
+    public static function getAll()
+    {
+        return self::orderBy('nombre', 'asc')->get();
+    }
+
     /**
      * Obtener un servicio por ID
      */
-    public function getById($id) {
-        $query = "SELECT * FROM servicios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getById($id)
+    {
+        return self::find($id);
     }
-    
+
     /**
      * Obtener un servicio por nombre
      */
-    public function getByNombre($nombre) {
-        $query = "SELECT * FROM servicios WHERE nombre = :nombre";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':nombre' => $nombre]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getByNombre($nombre)
+    {
+        return self::where('nombre', $nombre)->first();
     }
-    
+
     /**
      * Obtener servicios por propiedad
      */
-    public function getByPropiedad($propiedadId) {
-        $query = "SELECT s.* 
-                  FROM servicios s
-                  JOIN propiedad_servicio ps ON s.id = ps.servicio_id
-                  WHERE ps.propiedad_id = :propiedad_id
-                  ORDER BY s.nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':propiedad_id' => $propiedadId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByPropiedad($propiedadId)
+    {
+        return self::whereHas('propiedades', function($query) use ($propiedadId) {
+            $query->where('propiedad_id', $propiedadId);
+        })->orderBy('nombre', 'asc')->get();
     }
-    
+
     /**
      * Crear un nuevo servicio
      */
-    public function create($data) {
-        $query = "INSERT INTO servicios (nombre) VALUES (:nombre)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':nombre' => $data['nombre']]);
-        return $this->db->lastInsertId();
+    public static function createServicio($data)
+    {
+        return self::create($data);
     }
-    
+
     /**
-     * Actualizar un servicio
+     * Verificar si existe un servicio por ID
      */
-    public function update($id, $data) {
-        $query = "UPDATE servicios SET nombre = :nombre WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':nombre' => $data['nombre'],
-            ':id' => $id
-        ]);
+    public static function exists($id)
+    {
+        return self::where('id', $id)->exists();
     }
-    
-    /**
-     * Eliminar un servicio
-     */
-    public function delete($id) {
-        $query = "DELETE FROM servicios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
-    }
-    
-    /**
-     * Verificar si existe un servicio
-     */
-    public function exists($id) {
-        $query = "SELECT id FROM servicios WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
-    }
-    
+
     /**
      * Verificar si ya existe un servicio con el mismo nombre
      */
-    public function existsByNombre($nombre, $excluirId = null) {
+    public static function existsByNombre($nombre, $excluirId = null)
+    {
+        $query = self::where('nombre', $nombre);
+        
         if ($excluirId) {
-            $query = "SELECT id FROM servicios WHERE nombre = :nombre AND id != :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':nombre' => $nombre,
-                ':id' => $excluirId
-            ]);
-        } else {
-            $query = "SELECT id FROM servicios WHERE nombre = :nombre";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':nombre' => $nombre]);
+            $query->where('id', '!=', $excluirId);
         }
-        return $stmt->rowCount() > 0;
+        
+        return $query->exists();
     }
-    
+
     /**
      * Verificar si tiene propiedades asociadas
      */
-    public function hasPropiedades($id) {
-        $query = "SELECT COUNT(*) as total FROM propiedad_servicio WHERE servicio_id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] > 0;
+    public function hasPropiedades()
+    {
+        return $this->propiedades()->count() > 0;
     }
-    
+
     /**
      * Obtener servicios con conteo de propiedades
      */
-    public function getAllWithCount() {
-        $query = "SELECT s.*, COUNT(ps.propiedad_id) as total_propiedades 
-                  FROM servicios s
-                  LEFT JOIN propiedad_servicio ps ON s.id = ps.servicio_id
-                  GROUP BY s.id
-                  ORDER BY s.nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAllWithCount()
+    {
+        return self::withCount('propiedades')
+            ->orderBy('nombre', 'asc')
+            ->get()
+            ->map(function($servicio) {
+                return [
+                    'id' => $servicio->id,
+                    'nombre' => $servicio->nombre,
+                    'total_propiedades' => $servicio->propiedades_count
+                ];
+            });
     }
-    
+
     /**
      * Obtener servicios populares (más usados)
      */
-    public function getPopulares($limit = 10) {
-        $query = "SELECT s.*, COUNT(ps.propiedad_id) as total_propiedades 
-                  FROM servicios s
-                  JOIN propiedad_servicio ps ON s.id = ps.servicio_id
-                  GROUP BY s.id
-                  ORDER BY total_propiedades DESC
-                  LIMIT :limit";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getPopulares($limit = 10)
+    {
+        return self::withCount('propiedades')
+            ->having('propiedades_count', '>', 0)
+            ->orderBy('propiedades_count', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function($servicio) {
+                return [
+                    'id' => $servicio->id,
+                    'nombre' => $servicio->nombre,
+                    'total_propiedades' => $servicio->propiedades_count
+                ];
+            });
     }
 }

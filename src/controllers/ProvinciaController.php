@@ -6,8 +6,8 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/provincia_sanitizer.php';
-require_once SRC_PATH . 'validators/provincia_validator.php';
+require_once SRC_PATH . 'sanitizers/ProvinciaSanitizer.php';
+require_once SRC_PATH . 'validators/ProvinciaValidator.php';
 
 use App\Models\Provincia;
 

@@ -7,7 +7,7 @@ use App\Controllers\PropiedadController;
 $controller = new PropiedadController(); // Instanciamos una sola vez
 
 // --- Ruta: /propiedades/nuevo ---
-if ($path === '/propiedades/nuevo') {
+if ($path === '/api/propiedades/nuevo') {
     if ($method === 'GET') {
         $controller->mostrarFormulario(); // Llamada al metodo de la clase
     } else {
@@ -17,7 +17,7 @@ if ($path === '/propiedades/nuevo') {
 }
 
 // --- Ruta: /propiedades ---
-if (trim($path) === '/propiedades') {
+if (trim($path) === '/api/propiedades') {
     switch ($method) {
         case 'GET':
             $controller->listarPropiedades();

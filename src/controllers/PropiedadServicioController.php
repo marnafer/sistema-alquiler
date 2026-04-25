@@ -6,8 +6,8 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/propiedad_servicio_sanitizer.php';
-require_once SRC_PATH . 'validators/propiedad_servicio_validator.php';
+require_once SRC_PATH . 'sanitizers/PropiedadServicioSanitizer.php';
+require_once SRC_PATH . 'validators/PropiedadServicioValidator.php';
 
 use App\Models\PropiedadServicio;
 
