@@ -149,23 +149,26 @@ class Usuario extends Model
         return $query->exists();
     }
 
-    /**
-     * Verificar credenciales para login
-     * Retorna datos del usuario sin contrasena o false si falla
-     */
     public function verificarCredenciales($email, $contrasena)
-    {
-        $row = self::where('email', $email)->whereNull('deleted_at')->first();
-        if (!$row) return false;
+{
+    // 1. Buscamos el usuario
+    $usuario = self::where('email', $email)->whereNull('deleted_at')->first();
 
-        $arr = $row->toArray();
-        if (isset($arr['contrasena']) && password_verify($contrasena, $arr['contrasena'])) {
-            unset($arr['contrasena']);
-            return $arr;
-        }
-        return false;
+    if (!$usuario) return false;
+
+    // 2. IMPORTANTE: Accedemos a la propiedad del objeto ($usuario->contrasena)
+    // Esto funciona aunque esté en $hidden, porque estamos dentro del servidor.
+    if (password_verify($contrasena, $usuario->contrasena)) {
+        
+        // 3. Convertimos a array para la respuesta de la API
+        // Aquí el 'hidden' hará su trabajo y ELIMINARÁ la contraseña del JSON
+        $datosParaRespuesta = $usuario->toArray();
+        
+        return $datosParaRespuesta;
     }
 
+    return false;
+}
     /**
      * Obtener usuarios por rol
      */

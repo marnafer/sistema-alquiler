@@ -293,7 +293,7 @@ class UsuarioController {
         $contrasena = $data['contrasena'];
         
         // Validar email
-        $validacion = validarEmailLogin($email);
+        $validacion = validarEmailLoginUsuario($email);
         if (!$validacion['success']) {
             http_response_code(400);
             echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
