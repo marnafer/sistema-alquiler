@@ -8,80 +8,79 @@
  */
 function validarConsulta($data, $requerirId = false) {
     $errores = [];
-    
-    // 1. Validar ID (solo si se requiere)
+
+    // Validaciones
     if ($requerirId) {
-        $idValidation = validarIdConsultaRequerido($data['id'] ?? null);
-        if (!$idValidation['valid']) {
+        $idValidation = validarConsultaId($data['id'] ?? null);
+        if (!$idValidation['success']) {
             $errores['id'] = $idValidation['error'];
         }
     }
-    
-    // 2. Validar propiedad_id
+
     $propiedadValidation = validarPropiedadId($data['propiedad_id'] ?? null);
-    if (!$propiedadValidation['valid']) {
+    if (!$propiedadValidation['success']) {
         $errores['propiedad_id'] = $propiedadValidation['error'];
     }
-    
-    // 3. Validar inquilino_id
+
     $inquilinoValidation = validarInquilinoId($data['inquilino_id'] ?? null);
-    if (!$inquilinoValidation['valid']) {
+    if (!$inquilinoValidation['success']) {
         $errores['inquilino_id'] = $inquilinoValidation['error'];
     }
-    
-    // 4. Validar mensaje
+
     $mensajeValidation = validarMensajeConsulta($data['mensaje'] ?? null);
-    if (!$mensajeValidation['valid']) {
+    if (!$mensajeValidation['success']) {
         $errores['mensaje'] = $mensajeValidation['error'];
     }
-    
-    // 5. Validar fecha (opcional)
+
     if (isset($data['fecha_consulta']) && !empty($data['fecha_consulta'])) {
         $fechaValidation = validarFechaConsulta($data['fecha_consulta']);
-        if (!$fechaValidation['valid']) {
+        if (!$fechaValidation['success']) {
             $errores['fecha_consulta'] = $fechaValidation['error'];
         }
     }
-    
-    // Retornar resultado
+
+    //  SI HAY ERRORES
     if (count($errores) > 0) {
         return [
             'success' => false,
             'message' => 'Error de validación',
-            'errors' => $errores
+            'errors' => $errores,
+            'data' => null // 👈 IMPORTANTE
         ];
     }
-    
+
+    // DATOS LIMPIOS (podés mejorar esto con sanitizer si querés)
+    $dataLimpia = [
+        'id' => $data['id'] ?? null,
+        'propiedad_id' => (int) $data['propiedad_id'],
+        'inquilino_id' => (int) $data['inquilino_id'],
+        'mensaje' => trim($data['mensaje']),
+        'fecha_consulta' => $data['fecha_consulta'] ?? null
+    ];
+
     return [
         'success' => true,
         'message' => 'Validación exitosa',
-        'errors' => null
+        'errors' => null,
+        'data' => $dataLimpia 
     ];
 }
 
 /**
- * Validar ID de consulta (requerido)
+ * Validar ID de consulta 
  * @param mixed $id ID a validar
  * @return array Respuesta con valid y error
  */
-function validarIdConsultaRequerido($id) {
+function validarConsultaId($id): array {
     if ($id === null || $id === '') {
-        return ['valid' => false, 'error' => 'El ID de consulta es requerido'];
+        return ['success' => false, 'error' => 'El ID es requerido'];
     }
-    
-    if (!is_numeric($id)) {
-        return ['valid' => false, 'error' => 'El ID de consulta debe ser un número'];
+
+    if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
+        return ['success' => false, 'error' => 'El ID debe ser un entero positivo'];
     }
-    
-    if ($id <= 0) {
-        return ['valid' => false, 'error' => 'El ID de consulta debe ser un número positivo'];
-    }
-    
-    if (filter_var($id, FILTER_VALIDATE_INT) === false) {
-        return ['valid' => false, 'error' => 'El ID de consulta debe ser un número entero'];
-    }
-    
-    return ['valid' => true, 'error' => null];
+
+    return ['success' => true, 'error' => null];
 }
 
 /**
@@ -91,47 +90,47 @@ function validarIdConsultaRequerido($id) {
  */
 function validarPropiedadId($id) {
     if ($id === null || $id === '') {
-        return ['valid' => false, 'error' => 'El ID de propiedad es requerido'];
+        return ['success' => false, 'error' => 'El ID de propiedad es requerido'];
     }
     
     if (!is_numeric($id)) {
-        return ['valid' => false, 'error' => 'El ID de propiedad debe ser un número'];
+        return ['success' => false, 'error' => 'El ID de propiedad debe ser un número'];
     }
     
     if ($id <= 0) {
-        return ['valid' => false, 'error' => 'El ID de propiedad debe ser un número positivo'];
+        return ['success' => false, 'error' => 'El ID de propiedad debe ser un número positivo'];
     }
     
     if (filter_var($id, FILTER_VALIDATE_INT) === false) {
-        return ['valid' => false, 'error' => 'El ID de propiedad debe ser un número entero'];
+        return ['success' => false, 'error' => 'El ID de propiedad debe ser un número entero'];
     }
     
-    return ['valid' => true, 'error' => null];
+    return ['success' => true, 'error' => null];
 }
 
 /**
  * Validar ID de inquilino
  * @param mixed $id ID a validar
- * @return array Respuesta con valid y error
+ * @return array Respuesta con success y error
  */
 function validarInquilinoId($id) {
     if ($id === null || $id === '') {
-        return ['valid' => false, 'error' => 'El ID del inquilino es requerido'];
+        return ['success' => false, 'error' => 'El ID del inquilino es requerido'];
     }
     
     if (!is_numeric($id)) {
-        return ['valid' => false, 'error' => 'El ID del inquilino debe ser un número'];
+        return ['success' => false, 'error' => 'El ID del inquilino debe ser un número'];
     }
     
     if ($id <= 0) {
-        return ['valid' => false, 'error' => 'El ID del inquilino debe ser un número positivo'];
+        return ['success' => false, 'error' => 'El ID del inquilino debe ser un número positivo'];
     }
     
     if (filter_var($id, FILTER_VALIDATE_INT) === false) {
-        return ['valid' => false, 'error' => 'El ID del inquilino debe ser un número entero'];
+        return ['success' => false, 'error' => 'El ID del inquilino debe ser un número entero'];
     }
     
-    return ['valid' => true, 'error' => null];
+    return ['success' => true, 'error' => null];
 }
 
 /**
@@ -141,24 +140,24 @@ function validarInquilinoId($id) {
  */
 function validarMensajeConsulta($mensaje) {
     if ($mensaje === null || $mensaje === '') {
-        return ['valid' => false, 'error' => 'El mensaje es requerido'];
+        return ['success' => false, 'error' => 'El mensaje es requerido'];
     }
     
     $mensajeLimpio = trim($mensaje);
     
     if (strlen($mensajeLimpio) < 5) {
-        return ['valid' => false, 'error' => 'El mensaje debe tener al menos 5 caracteres'];
+        return ['success' => false, 'error' => 'El mensaje debe tener al menos 5 caracteres'];
     }
     
     if (strlen($mensajeLimpio) > 5000) {
-        return ['valid' => false, 'error' => 'El mensaje no puede exceder los 5000 caracteres'];
+        return ['success' => false, 'error' => 'El mensaje no puede exceder los 5000 caracteres'];
     }
     
     if (preg_match('/^\s*$/', $mensajeLimpio)) {
-        return ['valid' => false, 'error' => 'El mensaje no puede estar vacío o contener solo espacios'];
+        return ['success' => false, 'error' => 'El mensaje no puede estar vacío o contener solo espacios'];
     }
     
-    return ['valid' => true, 'error' => null];
+    return ['success' => true, 'error' => null];
 }
 
 /**
@@ -168,21 +167,21 @@ function validarMensajeConsulta($mensaje) {
  */
 function validarFechaConsulta($fecha) {
     if ($fecha === null || $fecha === '') {
-        return ['valid' => true, 'error' => null]; // Fecha opcional
+        return ['success' => true, 'error' => null]; // Fecha opcional
     }
     
     $timestamp = strtotime($fecha);
     
     if ($timestamp === false) {
-        return ['valid' => false, 'error' => 'La fecha no es válida'];
+        return ['success' => false, 'error' => 'La fecha no es válida'];
     }
     
     // Validar que no sea una fecha futura (opcional)
     if ($timestamp > time()) {
-        return ['valid' => false, 'error' => 'La fecha no puede ser futura'];
+        return ['success' => false, 'error' => 'La fecha no puede ser futura'];
     }
     
-    return ['valid' => true, 'error' => null];
+    return ['success' => true, 'error' => null];
 }
 
 /**
@@ -201,27 +200,4 @@ function validarCrearConsulta($data) {
  */
 function validarActualizarConsulta($data) {
     return validarConsulta($data, true);
-}
-
-/**
- * Validar solo el ID para operaciones de eliminación/búsqueda
- * @param mixed $id ID a validar
- * @return array Respuesta con errores o éxito
- */
-function validarSoloIdConsulta($id) {
-    $validation = validarIdConsultaRequerido($id);
-    
-    if (!$validation['valid']) {
-        return [
-            'success' => false,
-            'message' => 'ID inválido',
-            'errors' => ['id' => $validation['error']]
-        ];
-    }
-    
-    return [
-        'success' => true,
-        'message' => 'ID válido',
-        'errors' => null
-    ];
 }

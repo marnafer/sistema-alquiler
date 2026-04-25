@@ -71,79 +71,79 @@ if ($path === '/') {
 }
 
 // --- PROPIEDADES ---
-elseif ($path === '/api/propiedades' || preg_match('#^/api/propiedades/\d+$#', $path)) {
+elseif (strpos($path, '/api/propiedades') === 0) {
     require_once SRC_PATH . 'routes/propiedad_router.php';
     exit;
 }
 
 // --- FAVORITOS ---
-elseif ($path === '/api/favoritos' || preg_match('#^/api/favoritos/\d+$#', $path)) {
+elseif (strpos($path, '/api/favoritos') === 0) {
     require_once SRC_PATH . 'routes/favorito_router.php';
     exit;
 }
 
 // --- USUARIOS ---
-elseif ($path === '/api/usuarios' || preg_match('#^/api/usuarios/\d+$#', $path)) {
+elseif (strpos($path, '/api/usuarios') === 0) {
     require_once SRC_PATH . 'routes/usuario_router.php';
     exit;
 }
 
 // --- LOGS ---
-elseif ($path === '/api/logs' || $path === '/api/logs-actividad') {
+elseif (strpos($path, '/api/logs') === 0 || strpos($path, '/api/logs-actividad') === 0) {
     require_once SRC_PATH . 'routes/log_router.php';
     exit;
 }
 
 // --- LOCALIDADES ---
-elseif ($path === '/api/localidades' || preg_match('#^/api/localidades/\d+$#', $path)) {
+elseif (strpos($path, '/api/localidades') === 0) {
     require_once SRC_PATH . 'routes/localidad_router.php';
     exit;
 }
 
 // --- PROPIEDAD IMÁGENES ---
-elseif ($path === '/api/propiedad-imagenes' || preg_match('#^/api/propiedad-imagenes/\d+$#', $path)) {
+elseif (strpos($path, '/api/propiedad-imagenes') === 0) {
     require_once SRC_PATH . 'routes/propiedadImagen_router.php';
     exit;
 }
 
 // --- CATEGORÍAS ---
-elseif ($path === '/api/categorias' || preg_match('#^/api/categorias/\d+$#', $path)) {
+elseif (strpos($path, '/api/categorias') === 0) {
     require_once SRC_PATH . 'routes/categoria_router.php';
     exit;
 }
 
 // --- PROVINCIAS ---
-elseif ($path === '/api/provincias' || preg_match('#^/api/provincias/\d+$#', $path)) {
+elseif (strpos($path, '/api/provincias') === 0) {
     require_once SRC_PATH . 'routes/provincia_router.php';
     exit;
 }
 
 // --- SERVICIOS ---
-elseif ($path === '/api/servicios' || preg_match('#^/api/servicios/\d+$#', $path)) {
+elseif (strpos($path, '/api/servicios') === 0) {
     require_once SRC_PATH . 'routes/servicio_router.php';
     exit;
 }
 
 // --- RESERVAS ---
-elseif ($path === '/api/reservas' || preg_match('#^/api/reservas/\d+$#', $path)) {
+elseif (strpos($path, '/api/reservas') === 0) {
     require_once SRC_PATH . 'routes/reserva_router.php';
     exit;
 }
 
 // --- RESEÑAS ---
-elseif ($path === '/api/resenas' || preg_match('#^/api/resenas/\d+$#', $path)) {
+elseif (strpos($path, '/api/resenas') === 0) {
     require_once SRC_PATH . 'routes/resena_router.php';
     exit;
 }
 
 // --- CONSULTAS ---
-elseif ($path === '/api/consultas' || preg_match('#^/api/consultas/\d+$#', $path)) {
+elseif (strpos($path, '/api/consultas') === 0) {
     require_once SRC_PATH . 'routes/consulta_router.php';
     exit;
 }
 
 // --- ROLES ---
-elseif ($path === '/api/roles' || preg_match('#^/api/roles/\d+$#', $path)) {
+elseif (strpos($path, '/api/roles') === 0) {
     require_once SRC_PATH . 'routes/rol_router.php';
     exit;
 }
