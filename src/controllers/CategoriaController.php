@@ -1,7 +1,6 @@
 <?php
 /**
  * Controlador del módulo de Categorías
- * Respuestas JSON para la API; vistas HTML si se exponen
  */
 
 namespace App\Controllers;
@@ -14,13 +13,6 @@ use App\Validators\CategoriaValidator;
 use App\Models\Categoria;
 
 class CategoriaController {
-
-    private $model;
-
-    public function __construct() {
-        $this->model = new Categoria();
-        // No forzar header global; hacerlo por método
-    }
 
     /**
      * Listar todas las categorías (API)
@@ -92,16 +84,16 @@ class CategoriaController {
 
         try {
             // Verificar si ya existe por nombre (supone método en modelo)
-            if ($this->model->existeNombre($san['nombre'] ?? '')) {
+            if (Categoria::where('nombre', $san['nombre'])->exists()) {
                 http_response_code(409);
                 echo json_encode(['success' => false, 'error' => 'Ya existe una categoría con este nombre'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
-            $id = $this->model->crear($resultado['data']);
-            $resultado['data']['id'] = $id;
+            $categoria = Categoria::create($resultado['data']);
+           
             http_response_code(201);
-            echo json_encode(['success' => true, 'message' => 'Categoría creada exitosamente', 'data' => $resultado['data']], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['success' => true, 'message' => 'Categoría creada exitosamente', 'data' => $categoria], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
@@ -114,6 +106,7 @@ class CategoriaController {
      */
     public function actualizar($id) {
         header('Content-Type: application/json; charset=utf-8');
+
         $raw = json_decode(file_get_contents('php://input'), true) ?? [];
         $raw['id'] = $id;
 
@@ -122,28 +115,54 @@ class CategoriaController {
 
         if (!$resultado['success']) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'errors' => $resultado['errors']], JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'success' => false, 
+                'errors' => $resultado['errors']
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
         try {
-            if (!$this->model->existe($id)) {
+            $id = $resultado['data']['id'];
+
+            $categoria = Categoria::find($id);
+
+            if (!$categoria) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'Categoría no encontrada'], JSON_UNESCAPED_UNICODE);
+                echo json_encode([
+                    'success' => false, 
+                    'error' => 'Categoría no encontrada'
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
-            if ($this->model->existeNombreExcepto($san['nombre'], $id)) {
+            // Validar nombre duplicado
+            if (Categoria::where('nombre', $resultado['data']['nombre'])
+                ->where('id', '!=', $id)
+                ->exists()) {
+
                 http_response_code(409);
-                echo json_encode(['success' => false, 'error' => 'Ya existe otra categoría con este nombre'], JSON_UNESCAPED_UNICODE);
+                echo json_encode([
+                    'success' => false, 
+                    'error' => 'Ya existe otra categoría con este nombre'
+                ], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
-            $this->model->actualizar($id, $resultado['data']);
-            echo json_encode(['success' => true, 'message' => 'Categoría actualizada exitosamente', 'data' => $resultado['data']], JSON_UNESCAPED_UNICODE);
+            $categoria->update($resultado['data']);
+
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Categoría actualizada exitosamente', 
+                'data' => $categoria // devolver el modelo
+            ], JSON_UNESCAPED_UNICODE);
+
         } catch (\Exception $e) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'success' => false, 
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
 
@@ -152,48 +171,60 @@ class CategoriaController {
      * DELETE /api/categorias/{id}
      */
     public function eliminar($id) {
-        header('Content-Type: application/json; charset=utf-8');
-        try {
-            $idS = CategoriaSanitizer::sanitizeId($id);
-            $validacion = CategoriaValidator::validarCategoria(['id' => $idS], true);
-            if (!$validacion['success']) {
-                http_response_code(400);
-                echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
-                return;
-            }
+    header('Content-Type: application/json; charset=utf-8');
 
-            if (!$this->model->existe($idS)) {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'Categoría no encontrada'], JSON_UNESCAPED_UNICODE);
-                return;
-            }
+    try {
+        // Sanitizar ID
+        $idS = CategoriaSanitizer::sanitizeId($id);
 
-            if ($this->model->tienePropiedadesAsociadas($idS)) {
-                http_response_code(409);
-                echo json_encode(['success' => false, 'error' => 'No se puede eliminar la categoría porque tiene propiedades asociadas'], JSON_UNESCAPED_UNICODE);
-                return;
-            }
+        // Validar SOLO el ID (no toda la categoría)
+        $validacion = CategoriaValidator::validarId($idS);
 
-            $this->model->eliminar($idS);
-            echo json_encode(['success' => true, 'message' => 'Categoría eliminada exitosamente'], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        if (!$validacion['success']) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $validacion['error']
+            ], JSON_UNESCAPED_UNICODE);
+            return;
         }
-    }
 
-    /**
-     * Listar categorías para VISTA (también JSON)
-     * GET /categorias
-     */
-    public function listarVista() {
-        header('Content-Type: application/json; charset=utf-8');
-        try {
-            $categorias = $this->model->listar();
-            echo json_encode(['success' => true, 'view' => 'categorias', 'data' => $categorias, 'total' => count($categorias), 'timestamp' => date('Y-m-d H:i:s')], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        // Buscar con Eloquent
+        $categoria = Categoria::find($idS);
+
+        if (!$categoria) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Categoría no encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
         }
+
+        // Validar relaciones
+        if ($categoria->propiedades()->exists()) {
+            http_response_code(409);
+            echo json_encode([
+                'success' => false,
+                'error' => 'No se puede eliminar la categoría porque tiene propiedades asociadas'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Eliminar con Eloquent
+        $categoria->delete();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Categoría eliminada exitosamente'
+        ], JSON_UNESCAPED_UNICODE);
+
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
     }
 }
+

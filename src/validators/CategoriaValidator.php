@@ -54,7 +54,7 @@ class CategoriaValidator
 
         if ($requerirId) {
             $resId = self::validarId($data['id'] ?? null);
-            if (!$resId['success    ']) $errores['id'] = $resId['error'];
+            if (!$resId['success']) $errores['id'] = $resId['error'];
         }
 
         $resNombre = self::validarNombre($data['nombre'] ?? null);

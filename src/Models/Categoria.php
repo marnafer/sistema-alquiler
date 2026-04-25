@@ -19,10 +19,5 @@ class Categoria extends Model
     {
         return $this->hasMany(Propiedad::class, 'categoria_id');
     }
-
-   //* public static function listar()
-    //{
-     //   return self::all();
-    //}
     
 }

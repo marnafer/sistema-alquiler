@@ -8,17 +8,9 @@ namespace App\Controllers;
 
 require_once SRC_PATH . 'sanitizers/consulta_sanitizer.php';
 
-
 use App\Models\Consulta;
 
 class ConsultaController {
-    
-    private $model;
-    
-    public function __construct() {
-        $this->model = new Consulta();
-        header('Content-Type: application/json');
-    }
     
     /**
      * Listar todas las consultas
