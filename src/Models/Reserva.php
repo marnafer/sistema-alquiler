@@ -1,167 +1,242 @@
 <?php
 /**
- * Modelo de Reservas (versión sencilla)
+ * Modelo de Reservas (versión Eloquent)
  */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Reserva {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
+class Reserva extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'reservas';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'propiedad_id',
+        'inquilino_id',
+        'fecha_desde',
+        'fecha_hasta',
+        'precio_total',
+        'estado'
+    ];
+
+    protected $casts = [
+        'fecha_desde' => 'date',
+        'fecha_hasta' => 'date',
+        'fecha_reserva' => 'datetime'
+    ];
+
+    /**
+     * Relación con Propiedad
+     */
+    public function propiedad()
+    {
+        return $this->belongsTo(Propiedad::class, 'propiedad_id');
     }
-    
+
+    /**
+     * Relación con Usuario (inquilino)
+     */
+    public function inquilino()
+    {
+        return $this->belongsTo(Usuario::class, 'inquilino_id');
+    }
+
+    /**
+     * Relación con Reseña
+     */
+    public function resena()
+    {
+        return $this->hasOne(Resena::class, 'reserva_id');
+    }
+
     /**
      * Obtener todas las reservas
      */
-    public function getAll() {
-        $query = "SELECT r.*, 
-                         p.titulo as propiedad_titulo,
-                         CONCAT(u.nombre, ' ', u.apellido) as inquilino_nombre
-                  FROM reservas r
-                  JOIN propiedades p ON r.propiedad_id = p.id
-                  JOIN usuarios u ON r.inquilino_id = u.id
-                  WHERE r.deleted_at IS NULL
-                  ORDER BY r.fecha_reserva DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function getAll()
+    {
+        return self::with(['propiedad', 'inquilino'])
+            ->whereNull('deleted_at')
+            ->orderBy('fecha_reserva', 'desc')
+            ->get()
+            ->map(function($reserva) {
+                return [
+                    'id' => $reserva->id,
+                    'propiedad_id' => $reserva->propiedad_id,
+                    'inquilino_id' => $reserva->inquilino_id,
+                    'fecha_desde' => $reserva->fecha_desde,
+                    'fecha_hasta' => $reserva->fecha_hasta,
+                    'precio_total' => $reserva->precio_total,
+                    'estado' => $reserva->estado,
+                    'fecha_reserva' => $reserva->fecha_reserva,
+                    'propiedad_titulo' => $reserva->propiedad->titulo ?? null,
+                    'inquilino_nombre' => $reserva->inquilino ? ($reserva->inquilino->nombre . ' ' . $reserva->inquilino->apellido) : null
+                ];
+            });
     }
-    
+
     /**
      * Obtener una reserva por ID
      */
-    public function getById($id) {
-        $query = "SELECT r.*, 
-                         p.titulo as propiedad_titulo,
-                         CONCAT(u.nombre, ' ', u.apellido) as inquilino_nombre
-                  FROM reservas r
-                  JOIN propiedades p ON r.propiedad_id = p.id
-                  JOIN usuarios u ON r.inquilino_id = u.id
-                  WHERE r.id = :id AND r.deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function getById($id)
+    {
+        $reserva = self::with(['propiedad', 'inquilino'])
+            ->where('id', $id)
+            ->whereNull('deleted_at')
+            ->first();
+        
+        if (!$reserva) {
+            return null;
+        }
+        
+        return [
+            'id' => $reserva->id,
+            'propiedad_id' => $reserva->propiedad_id,
+            'inquilino_id' => $reserva->inquilino_id,
+            'fecha_desde' => $reserva->fecha_desde,
+            'fecha_hasta' => $reserva->fecha_hasta,
+            'precio_total' => $reserva->precio_total,
+            'estado' => $reserva->estado,
+            'fecha_reserva' => $reserva->fecha_reserva,
+            'propiedad_titulo' => $reserva->propiedad->titulo ?? null,
+            'inquilino_nombre' => $reserva->inquilino ? ($reserva->inquilino->nombre . ' ' . $reserva->inquilino->apellido) : null
+        ];
     }
-    
+
     /**
      * Crear una nueva reserva
      */
-    public function create($data) {
-        $query = "INSERT INTO reservas (propiedad_id, inquilino_id, fecha_desde, fecha_hasta, precio_total, estado) 
-                  VALUES (:propiedad_id, :inquilino_id, :fecha_desde, :fecha_hasta, :precio_total, :estado)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':propiedad_id' => $data['propiedad_id'],
-            ':inquilino_id' => $data['inquilino_id'],
-            ':fecha_desde' => $data['fecha_desde'],
-            ':fecha_hasta' => $data['fecha_hasta'],
-            ':precio_total' => $data['precio_total'],
-            ':estado' => $data['estado']
-        ]);
-        return $this->db->lastInsertId();
+    public function createReserva($data)
+    {
+        return self::create($data);
     }
-    
+
     /**
      * Actualizar una reserva
      */
-    public function update($id, $data) {
-        $query = "UPDATE reservas 
-                  SET propiedad_id = :propiedad_id, 
-                      inquilino_id = :inquilino_id, 
-                      fecha_desde = :fecha_desde, 
-                      fecha_hasta = :fecha_hasta, 
-                      precio_total = :precio_total,
-                      estado = :estado
-                  WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':propiedad_id' => $data['propiedad_id'],
-            ':inquilino_id' => $data['inquilino_id'],
-            ':fecha_desde' => $data['fecha_desde'],
-            ':fecha_hasta' => $data['fecha_hasta'],
-            ':precio_total' => $data['precio_total'],
-            ':estado' => $data['estado'],
-            ':id' => $id
-        ]);
+    public function updateReserva($id, $data)
+    {
+        $reserva = self::find($id);
+        if (!$reserva) {
+            return false;
+        }
+        return $reserva->update($data);
     }
-    
+
     /**
      * Eliminar reserva (soft delete)
      */
-    public function delete($id) {
-        $query = "UPDATE reservas SET deleted_at = NOW() WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
+    public function deleteReserva($id)
+    {
+        $reserva = self::find($id);
+        if (!$reserva) {
+            return false;
+        }
+        return $reserva->delete();
     }
-    
+
     /**
      * Verificar si existe una reserva
      */
-    public function exists($id) {
-        $query = "SELECT id FROM reservas WHERE id = :id AND deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public function exists($id)
+    {
+        return self::where('id', $id)->whereNull('deleted_at')->exists();
     }
-    
+
     /**
      * Cambiar estado de una reserva
      */
-    public function changeStatus($id, $estado) {
-        $query = "UPDATE reservas SET estado = :estado WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':estado' => $estado,
-            ':id' => $id
-        ]);
+    public function changeStatus($id, $estado)
+    {
+        $reserva = self::find($id);
+        if (!$reserva) {
+            return false;
+        }
+        $reserva->estado = $estado;
+        return $reserva->save();
     }
-    
+
     /**
      * Verificar disponibilidad de una propiedad
      */
-    public function checkAvailability($propiedadId, $fechaDesde, $fechaHasta) {
-        $query = "SELECT COUNT(*) as total 
-                  FROM reservas 
-                  WHERE propiedad_id = :propiedad_id 
-                  AND deleted_at IS NULL
-                  AND estado IN ('pendiente', 'confirmada')
-                  AND fecha_desde <= :fecha_hasta 
-                  AND fecha_hasta >= :fecha_desde";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':propiedad_id' => $propiedadId,
-            ':fecha_desde' => $fechaDesde,
-            ':fecha_hasta' => $fechaHasta
-        ]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] == 0;
+    public function checkAvailability($propiedadId, $fechaDesde, $fechaHasta)
+    {
+        $existe = self::where('propiedad_id', $propiedadId)
+            ->whereNull('deleted_at')
+            ->whereIn('estado', ['pendiente', 'confirmada'])
+            ->where(function($query) use ($fechaDesde, $fechaHasta) {
+                $query->where('fecha_desde', '<=', $fechaHasta)
+                      ->where('fecha_hasta', '>=', $fechaDesde);
+            })
+            ->exists();
+        
+        return !$existe;
     }
-    
+
     /**
      * Verificar si la propiedad existe
      */
-    public function propiedadExists($id) {
-        $query = "SELECT id FROM propiedades WHERE id = :id AND deleted_at IS NULL AND disponible = 1";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public function propiedadExists($id)
+    {
+        return Propiedad::where('id', $id)
+            ->whereNull('deleted_at')
+            ->where('disponible', 1)
+            ->exists();
     }
-    
+
     /**
      * Verificar si el inquilino existe
      */
-    public function inquilinoExists($id) {
-        $query = "SELECT id FROM usuarios WHERE id = :id AND deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public function inquilinoExists($id)
+    {
+        return Usuario::where('id', $id)->whereNull('deleted_at')->exists();
+    }
+
+    /**
+     * Obtener reservas por propiedad
+     */
+    public function getByPropiedad($propiedadId)
+    {
+        return self::with('inquilino')
+            ->where('propiedad_id', $propiedadId)
+            ->whereNull('deleted_at')
+            ->orderBy('fecha_desde', 'desc')
+            ->get()
+            ->map(function($reserva) {
+                return [
+                    'id' => $reserva->id,
+                    'fecha_desde' => $reserva->fecha_desde,
+                    'fecha_hasta' => $reserva->fecha_hasta,
+                    'precio_total' => $reserva->precio_total,
+                    'estado' => $reserva->estado,
+                    'inquilino_nombre' => $reserva->inquilino ? ($reserva->inquilino->nombre . ' ' . $reserva->inquilino->apellido) : null
+                ];
+            });
+    }
+
+    /**
+     * Obtener reservas por inquilino
+     */
+    public function getByInquilino($inquilinoId)
+    {
+        return self::with('propiedad')
+            ->where('inquilino_id', $inquilinoId)
+            ->whereNull('deleted_at')
+            ->orderBy('fecha_reserva', 'desc')
+            ->get()
+            ->map(function($reserva) {
+                return [
+                    'id' => $reserva->id,
+                    'fecha_desde' => $reserva->fecha_desde,
+                    'fecha_hasta' => $reserva->fecha_hasta,
+                    'precio_total' => $reserva->precio_total,
+                    'estado' => $reserva->estado,
+                    'propiedad_titulo' => $reserva->propiedad->titulo ?? null
+                ];
+            });
     }
 }

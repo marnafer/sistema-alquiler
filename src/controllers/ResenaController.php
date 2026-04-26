@@ -1,29 +1,33 @@
 <?php
 /**
  * Controlador de Reseñas
- * TODAS las respuestas son en JSON
  */
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/resena_sanitizer.php';
-require_once SRC_PATH . 'validators/resena_validator.php';
+require_once SRC_PATH . 'sanitizers/ResenaSanitizer.php';
+require_once SRC_PATH . 'validators/ResenaValidator.php';
 
-use App\Models\ResenaModel;
+use App\Models\Resena;
+use App\Sanitizers\ResenaSanitizer;
+use App\Validators\ResenaValidator;
+use Exception;
 
-class ResenaController {
-    
+class ResenaController
+{
     private $model;
-    
-    public function __construct() {
-        $this->model = new ResenaModel();
+
+    public function __construct()
+    {
+        $this->model = new Resena();
         header('Content-Type: application/json');
     }
-    
+
     /**
      * GET /api/resenas
      */
-    public function index() {
+    public function index()
+    {
         try {
             $resenas = $this->model->getAll();
             echo json_encode([
@@ -31,7 +35,7 @@ class ResenaController {
                 'data' => $resenas,
                 'total' => count($resenas)
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -39,21 +43,22 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/resenas/{id}
      */
-    public function show($id) {
+    public function show($id)
+    {
         try {
-            $validacion = validarSoloIdResena($id);
+            $validacion = ResenaValidator::validarSoloId($id);
             if (!$validacion['success']) {
                 http_response_code(400);
                 echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
                 return;
             }
-            
+
             $resena = $this->model->getById($id);
-            
+
             if ($resena) {
                 echo json_encode([
                     'success' => true,
@@ -66,7 +71,7 @@ class ResenaController {
                     'error' => 'Reseña no encontrada'
                 ], JSON_UNESCAPED_UNICODE);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -74,11 +79,12 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/resenas/propiedad/{id}
      */
-    public function getByPropiedad($propiedadId) {
+    public function getByPropiedad($propiedadId)
+    {
         try {
             $resenas = $this->model->getByPropiedad($propiedadId);
             $promedio = $this->model->getPromedioByPropiedad($propiedadId);
@@ -91,7 +97,7 @@ class ResenaController {
                 'total_resenas' => $promedio['total'],
                 'propiedad_id' => $propiedadId
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -99,11 +105,12 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/resenas/usuario/{id}
      */
-    public function getByUsuario($usuarioId) {
+    public function getByUsuario($usuarioId)
+    {
         try {
             $resenas = $this->model->getByUsuario($usuarioId);
             
@@ -113,7 +120,7 @@ class ResenaController {
                 'total' => count($resenas),
                 'usuario_id' => $usuarioId
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -121,11 +128,12 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * GET /api/resenas/estadisticas
      */
-    public function getEstadisticas() {
+    public function getEstadisticas()
+    {
         try {
             $estadisticas = $this->model->getEstadisticas();
             
@@ -133,7 +141,7 @@ class ResenaController {
                 'success' => true,
                 'data' => $estadisticas
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -141,13 +149,14 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * POST /api/resenas
      */
-    public function store() {
+    public function store()
+    {
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$data) {
             http_response_code(400);
             echo json_encode([
@@ -156,18 +165,23 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
-        
-        // Sanitizar
-        $datosSanitizados = sanitizarResena($data);
-        
-        // Validar
-        $validacion = validarCrearResena($datosSanitizados);
-        if (!$validacion['success']) {
+
+        // 1. SANITIZAR
+        $datosSanitizados = ResenaSanitizer::sanitizar($data);
+
+        // 2. VALIDAR
+        $errores = ResenaValidator::validarCrear($datosSanitizados);
+
+        if (!empty($errores)) {
             http_response_code(400);
-            echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $errores
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
-        
+
         try {
             // Verificar que la reserva existe y está finalizada
             if (!$this->model->reservaExistsAndFinalizada($datosSanitizados['reserva_id'])) {
@@ -178,7 +192,7 @@ class ResenaController {
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
-            
+
             // Verificar que no existe ya una reseña para esta reserva
             if ($this->model->existePorReserva($datosSanitizados['reserva_id'])) {
                 http_response_code(409);
@@ -188,19 +202,17 @@ class ResenaController {
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
-            
+
             // Crear reseña
-            $id = $this->model->create($datosSanitizados);
-            $datosSanitizados['id'] = $id;
-            $datosSanitizados['fecha_publicacion'] = date('Y-m-d H:i:s');
-            
+            $id = $this->model->createResena($datosSanitizados);
+
             http_response_code(201);
             echo json_encode([
                 'success' => true,
                 'message' => 'Reseña creada exitosamente',
-                'data' => $datosSanitizados
+                'data' => ['id' => $id]
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -208,13 +220,14 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * PUT /api/resenas/{id}
      */
-    public function update($id) {
+    public function update($id)
+    {
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$data) {
             http_response_code(400);
             echo json_encode([
@@ -223,17 +236,25 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
-        
+
         $data['id'] = $id;
-        $datosSanitizados = sanitizarResena($data);
-        
-        $validacion = validarActualizarResena($datosSanitizados);
-        if (!$validacion['success']) {
+
+        // 1. SANITIZAR
+        $datosSanitizados = ResenaSanitizer::sanitizar($data);
+
+        // 2. VALIDAR
+        $errores = ResenaValidator::validarActualizar($datosSanitizados);
+
+        if (!empty($errores)) {
             http_response_code(400);
-            echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $errores
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
-        
+
         try {
             if (!$this->model->exists($id)) {
                 http_response_code(404);
@@ -243,15 +264,14 @@ class ResenaController {
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
-            
-            $this->model->update($id, $datosSanitizados);
-            
+
+            $this->model->updateResena($id, $datosSanitizados);
+
             echo json_encode([
                 'success' => true,
-                'message' => 'Reseña actualizada exitosamente',
-                'data' => $datosSanitizados
+                'message' => 'Reseña actualizada exitosamente'
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -259,19 +279,20 @@ class ResenaController {
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-    
+
     /**
      * DELETE /api/resenas/{id}
      */
-    public function delete($id) {
-        $validacion = validarSoloIdResena($id);
-        
+    public function delete($id)
+    {
+        $validacion = ResenaValidator::validarSoloId($id);
+
         if (!$validacion['success']) {
             http_response_code(400);
             echo json_encode($validacion, JSON_UNESCAPED_UNICODE);
             return;
         }
-        
+
         try {
             if (!$this->model->exists($id)) {
                 http_response_code(404);
@@ -281,14 +302,14 @@ class ResenaController {
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
-            
-            $this->model->delete($id);
-            
+
+            $this->model->deleteResena($id);
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Reseña eliminada exitosamente'
             ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,

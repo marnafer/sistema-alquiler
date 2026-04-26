@@ -88,18 +88,28 @@ if ($path === '/health') {
     exit;
 }
 
-// Home
 if ($path === '/') {
     renderJson([
         'message' => 'API Alquiler Permanente funcionando',
         'endpoints' => [
-            '/api/propiedades',
+            '/health',
             '/api/categorias',
+            '/api/provincias',
             '/api/localidades',
-            '/api/usuarios'
+            '/api/usuarios',
+            '/api/propiedades',
+            '/api/servicios',
+            '/api/propiedades-servicios',
+            '/api/reservas',
+            '/api/resenas',
+            '/api/consultas',
+            '/api/favoritos',
+            '/api/logs-actividad',
+            '/api/roles',
+            '/api/propiedad-imagenes',
+            '/api/debug/stats'
         ]
     ]);
-    exit;
 }
 
 // --- PROPIEDADES ---

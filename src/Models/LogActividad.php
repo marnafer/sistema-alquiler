@@ -1,210 +1,241 @@
 <?php
-/**
- * Modelo de LogActividad (versión sencilla)
- */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
 
-class LogActividadModel {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
+class LogActividad extends Model
+{
+    protected $table = 'logs_actividad';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'usuario_id',
+        'accion',
+        'ip_address',
+        'fecha'
+    ];
+
+    protected $casts = [
+        'fecha' => 'datetime'
+    ];
+
+    /**
+     * Relación con Usuario
+     */
+    public function usuario()
+    {
+        return $this->belongsTo(Usuario::class, 'usuario_id');
     }
-    
+
     /**
      * Obtener todos los logs
      */
-    public function getAll() {
-        $query = "SELECT l.*, 
-                         CONCAT(u.nombre, ' ', u.apellido) as usuario_nombre,
-                         u.email as usuario_email
-                  FROM logs_actividad l
-                  LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  ORDER BY l.fecha DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAll()
+    {
+        return self::with('usuario')
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function($log) {
+                return [
+                    'id' => $log->id,
+                    'usuario_id' => $log->usuario_id,
+                    'accion' => $log->accion,
+                    'ip_address' => $log->ip_address,
+                    'fecha' => $log->fecha,
+                    'usuario_nombre' => $log->usuario ? ($log->usuario->nombre . ' ' . $log->usuario->apellido) : null,
+                    'usuario_email' => $log->usuario->email ?? null
+                ];
+            });
     }
-    
+
     /**
      * Obtener un log por ID
      */
-    public function getById($id) {
-        $query = "SELECT l.*, 
-                         CONCAT(u.nombre, ' ', u.apellido) as usuario_nombre,
-                         u.email as usuario_email
-                  FROM logs_actividad l
-                  LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  WHERE l.id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getById($id)
+    {
+        $log = self::with('usuario')->find($id);
+        
+        if (!$log) {
+            return null;
+        }
+        
+        return [
+            'id' => $log->id,
+            'usuario_id' => $log->usuario_id,
+            'accion' => $log->accion,
+            'ip_address' => $log->ip_address,
+            'fecha' => $log->fecha,
+            'usuario_nombre' => $log->usuario ? ($log->usuario->nombre . ' ' . $log->usuario->apellido) : null,
+            'usuario_email' => $log->usuario->email ?? null
+        ];
     }
-    
+
     /**
      * Obtener logs por usuario
      */
-    public function getByUsuario($usuarioId) {
-        $query = "SELECT l.*, 
-                         CONCAT(u.nombre, ' ', u.apellido) as usuario_nombre
-                  FROM logs_actividad l
-                  LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  WHERE l.usuario_id = :usuario_id
-                  ORDER BY l.fecha DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':usuario_id' => $usuarioId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByUsuario($usuarioId)
+    {
+        return self::where('usuario_id', $usuarioId)
+            ->with('usuario')
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function($log) {
+                return [
+                    'id' => $log->id,
+                    'accion' => $log->accion,
+                    'ip_address' => $log->ip_address,
+                    'fecha' => $log->fecha,
+                    'usuario_nombre' => $log->usuario ? ($log->usuario->nombre . ' ' . $log->usuario->apellido) : null
+                ];
+            });
     }
-    
+
     /**
      * Obtener logs por rango de fechas
      */
-    public function getByFechaRango($fechaDesde, $fechaHasta) {
-        $query = "SELECT l.*, 
-                         CONCAT(u.nombre, ' ', u.apellido) as usuario_nombre
-                  FROM logs_actividad l
-                  LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  WHERE l.fecha BETWEEN :fecha_desde AND :fecha_hasta
-                  ORDER BY l.fecha DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':fecha_desde' => $fechaDesde,
-            ':fecha_hasta' => $fechaHasta
-        ]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByFechaRango($fechaDesde, $fechaHasta)
+    {
+        return self::with('usuario')
+            ->whereBetween('fecha', [$fechaDesde, $fechaHasta])
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function($log) {
+                return [
+                    'id' => $log->id,
+                    'usuario_id' => $log->usuario_id,
+                    'accion' => $log->accion,
+                    'ip_address' => $log->ip_address,
+                    'fecha' => $log->fecha,
+                    'usuario_nombre' => $log->usuario ? ($log->usuario->nombre . ' ' . $log->usuario->apellido) : null
+                ];
+            });
     }
-    
+
     /**
      * Obtener logs por acción (búsqueda)
      */
-    public function getByAccion($busqueda) {
-        $busqueda = "%{$busqueda}%";
-        $query = "SELECT l.*, 
-                         CONCAT(u.nombre, ' ', u.apellido) as usuario_nombre
-                  FROM logs_actividad l
-                  LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  WHERE l.accion LIKE :busqueda
-                  ORDER BY l.fecha DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':busqueda' => $busqueda]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByAccion($busqueda)
+    {
+        return self::with('usuario')
+            ->where('accion', 'LIKE', "%{$busqueda}%")
+            ->orderBy('fecha', 'desc')
+            ->get()
+            ->map(function($log) {
+                return [
+                    'id' => $log->id,
+                    'usuario_id' => $log->usuario_id,
+                    'accion' => $log->accion,
+                    'ip_address' => $log->ip_address,
+                    'fecha' => $log->fecha,
+                    'usuario_nombre' => $log->usuario ? ($log->usuario->nombre . ' ' . $log->usuario->apellido) : null
+                ];
+            });
     }
-    
+
     /**
      * Crear un nuevo log
      */
-    public function create($data) {
-        $query = "INSERT INTO logs_actividad (usuario_id, accion, ip_address, fecha) 
-                  VALUES (:usuario_id, :accion, :ip_address, NOW())";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':usuario_id' => $data['usuario_id'] ?? null,
-            ':accion' => $data['accion'],
-            ':ip_address' => $data['ip_address'] ?? null
-        ]);
-        return $this->db->lastInsertId();
+    public static function createLog($data)
+    {
+        $data['fecha'] = date('Y-m-d H:i:s');
+        return self::create($data);
     }
-    
+
     /**
      * Registrar acción de usuario (método auxiliar)
      */
-    public function registrar($usuarioId, $accion, $ip = null) {
-        $data = [
+    public static function registrar($usuarioId, $accion, $ip = null)
+    {
+        return self::createLog([
             'usuario_id' => $usuarioId,
             'accion' => $accion,
             'ip_address' => $ip
-        ];
-        return $this->create($data);
+        ]);
     }
-    
+
     /**
      * Eliminar logs antiguos (más de X días)
      */
-    public function deleteOldLogs($dias) {
-        $query = "DELETE FROM logs_actividad WHERE fecha < DATE_SUB(NOW(), INTERVAL :dias DAY)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':dias' => $dias]);
-        return $stmt->rowCount();
+    public static function deleteOldLogs($dias)
+    {
+        $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
+        return self::where('fecha', '<', $fechaLimite)->delete();
     }
-    
+
     /**
      * Eliminar logs de un usuario específico
      */
-    public function deleteByUsuario($usuarioId) {
-        $query = "DELETE FROM logs_actividad WHERE usuario_id = :usuario_id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':usuario_id' => $usuarioId]);
-        return $stmt->rowCount();
+    public static function deleteByUsuario($usuarioId)
+    {
+        return self::where('usuario_id', $usuarioId)->delete();
     }
-    
+
     /**
      * Eliminar un log específico
      */
-    public function delete($id) {
-        $query = "DELETE FROM logs_actividad WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
+    public static function deleteLog($id)
+    {
+        $log = self::find($id);
+        if (!$log) {
+            return false;
+        }
+        return $log->delete();
     }
-    
+
     /**
      * Verificar si existe un log
      */
-    public function exists($id) {
-        $query = "SELECT id FROM logs_actividad WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public static function exists($id)
+    {
+        return self::where('id', $id)->exists();
     }
-    
+
     /**
      * Obtener estadísticas de logs
      */
-    public function getEstadisticas() {
-        $estadisticas = [];
-        
-        // Total de logs
-        $query = "SELECT COUNT(*) as total FROM logs_actividad";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['total'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    public static function getEstadisticas()
+    {
+        $total = self::count();
         
         // Logs por día (últimos 7 días)
-        $query = "SELECT DATE(fecha) as dia, COUNT(*) as cantidad 
-                  FROM logs_actividad 
-                  WHERE fecha >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                  GROUP BY DATE(fecha)
-                  ORDER BY dia DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['por_dia'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $porDia = self::selectRaw('DATE(fecha) as dia, COUNT(*) as cantidad')
+            ->where('fecha', '>=', date('Y-m-d', strtotime('-7 days')))
+            ->groupBy('dia')
+            ->orderBy('dia', 'desc')
+            ->get()
+            ->toArray();
         
         // Logs por usuario (top 10)
-        $query = "SELECT u.nombre, u.apellido, COUNT(l.id) as cantidad 
-                  FROM logs_actividad l
-                  JOIN usuarios u ON l.usuario_id = u.id
-                  GROUP BY l.usuario_id
-                  ORDER BY cantidad DESC
-                  LIMIT 10";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['top_usuarios'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $topUsuarios = self::selectRaw('usuario_id, COUNT(*) as cantidad')
+            ->whereNotNull('usuario_id')
+            ->groupBy('usuario_id')
+            ->orderBy('cantidad', 'desc')
+            ->limit(10)
+            ->with('usuario')
+            ->get()
+            ->map(function($log) {
+                return [
+                    'nombre' => $log->usuario->nombre ?? null,
+                    'apellido' => $log->usuario->apellido ?? null,
+                    'cantidad' => $log->cantidad
+                ];
+            })
+            ->toArray();
         
         // Acciones más comunes
-        $query = "SELECT accion, COUNT(*) as cantidad 
-                  FROM logs_actividad 
-                  GROUP BY accion 
-                  ORDER BY cantidad DESC 
-                  LIMIT 10";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['acciones_comunes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $accionesComunes = self::selectRaw('accion, COUNT(*) as cantidad')
+            ->groupBy('accion')
+            ->orderBy('cantidad', 'desc')
+            ->limit(10)
+            ->get()
+            ->toArray();
         
-        return $estadisticas;
+        return [
+            'total' => $total,
+            'por_dia' => $porDia,
+            'top_usuarios' => $topUsuarios,
+            'acciones_comunes' => $accionesComunes
+        ];
     }
 }

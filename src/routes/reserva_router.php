@@ -1,7 +1,4 @@
 <?php
-/**
- * Router de Reservas (versión simplificada)
- */
 
 require_once SRC_PATH . 'controllers/ReservaController.php';
 
@@ -10,19 +7,33 @@ use App\Controllers\ReservaController;
 $controller = new ReservaController();
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Verificar disponibilidad: /api/reservas/disponibilidad
+global $path;
+
+// 1. Disponibilidad
 if ($path === '/api/reservas/disponibilidad' && $method === 'GET') {
     $controller->checkAvailability();
     exit;
 }
 
-// Cambiar estado: /api/reservas/{id}/estado
+// 2. Por propiedad
+if (preg_match('#^/api/reservas/propiedad/([0-9]+)$#', $path, $matches) && $method === 'GET') {
+    $controller->getByPropiedad($matches[1]);
+    exit;
+}
+
+// 3. Por inquilino
+if (preg_match('#^/api/reservas/inquilino/([0-9]+)$#', $path, $matches) && $method === 'GET') {
+    $controller->getByInquilino($matches[1]);
+    exit;
+}
+
+// 4. Cambiar estado
 if (preg_match('#^/api/reservas/([0-9]+)/estado$#', $path, $matches) && $method === 'PATCH') {
     $controller->changeStatus($matches[1]);
     exit;
 }
 
-// CRUD normal: /api/reservas
+// 5. CRUD general
 if ($path === '/api/reservas') {
     if ($method === 'GET') {
         $controller->index();
@@ -35,10 +46,10 @@ if ($path === '/api/reservas') {
     exit;
 }
 
-// CRUD con ID: /api/reservas/{id}
+// 6. CRUD con ID
 if (preg_match('#^/api/reservas/([0-9]+)$#', $path, $matches)) {
     $id = $matches[1];
-    
+
     if ($method === 'GET') {
         $controller->show($id);
     } elseif ($method === 'PUT') {
@@ -51,3 +62,6 @@ if (preg_match('#^/api/reservas/([0-9]+)$#', $path, $matches)) {
     }
     exit;
 }
+
+http_response_code(404);
+echo json_encode(["error" => "Ruta no encontrada"]);

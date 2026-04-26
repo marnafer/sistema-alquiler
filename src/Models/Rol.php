@@ -1,144 +1,134 @@
 <?php
-/**
- * Modelo de Roles (versión sencilla)
- */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
 
-class Rol {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
+class Rol extends Model
+{
+    protected $table = 'roles';
+    public $timestamps = false;
+
+    protected $fillable = ['nombre'];
+
+    /**
+     * Relación con Usuarios
+     */
+    public function usuarios()
+    {
+        return $this->hasMany(Usuario::class, 'rol_id');
     }
-    
+
     /**
      * Obtener todos los roles
      */
-    public function getAll() {
-        $query = "SELECT * FROM roles ORDER BY id ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAll()
+    {
+        return self::orderBy('id', 'asc')->get();
     }
-    
+
     /**
      * Obtener un rol por ID
      */
-    public function getById($id) {
-        $query = "SELECT * FROM roles WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getById($id)
+    {
+        return self::find($id);
     }
-    
+
     /**
      * Obtener un rol por nombre
      */
-    public function getByNombre($nombre) {
-        $query = "SELECT * FROM roles WHERE nombre = :nombre";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':nombre' => $nombre]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getByNombre($nombre)
+    {
+        return self::where('nombre', $nombre)->first();
     }
-    
+
     /**
      * Crear un nuevo rol
      */
-    public function create($data) {
-        $query = "INSERT INTO roles (nombre) VALUES (:nombre)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':nombre' => $data['nombre']]);
-        return $this->db->lastInsertId();
+    public static function createRol($data)
+    {
+        return self::create($data);
     }
-    
+
     /**
      * Actualizar un rol
      */
-    public function update($id, $data) {
-        $query = "UPDATE roles SET nombre = :nombre WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':nombre' => $data['nombre'],
-            ':id' => $id
-        ]);
+    public static function updateRol($id, $data)
+    {
+        $rol = self::find($id);
+        if (!$rol) {
+            return false;
+        }
+        return $rol->update($data);
     }
-    
+
     /**
      * Eliminar un rol
      */
-    public function delete($id) {
-        $query = "DELETE FROM roles WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
+    public static function deleteRol($id)
+    {
+        $rol = self::find($id);
+        if (!$rol) {
+            return false;
+        }
+        return $rol->delete();
     }
-    
+
     /**
      * Verificar si existe un rol
      */
-    public function exists($id) {
-        $query = "SELECT id FROM roles WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public static function exists($id)
+    {
+        return self::where('id', $id)->exists();
     }
-    
+
     /**
      * Verificar si ya existe un rol con el mismo nombre
      */
-    public function existsByNombre($nombre, $excluirId = null) {
+    public static function existsByNombre($nombre, $excluirId = null)
+    {
+        $query = self::where('nombre', $nombre);
+        
         if ($excluirId) {
-            $query = "SELECT id FROM roles WHERE nombre = :nombre AND id != :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':nombre' => $nombre,
-                ':id' => $excluirId
-            ]);
-        } else {
-            $query = "SELECT id FROM roles WHERE nombre = :nombre";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':nombre' => $nombre]);
+            $query->where('id', '!=', $excluirId);
         }
-        return $stmt->rowCount() > 0;
+        
+        return $query->exists();
     }
-    
+
     /**
      * Verificar si tiene usuarios asociados
      */
-    public function hasUsuarios($id) {
-        $query = "SELECT COUNT(*) as total FROM usuarios WHERE rol_id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] > 0;
+    public function hasUsuarios()
+    {
+        return $this->usuarios()->count() > 0;
     }
-    
+
     /**
      * Obtener roles con conteo de usuarios
      */
-    public function getAllWithCount() {
-        $query = "SELECT r.*, COUNT(u.id) as total_usuarios 
-                  FROM roles r
-                  LEFT JOIN usuarios u ON r.id = u.rol_id
-                  GROUP BY r.id
-                  ORDER BY r.id ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAllWithCount()
+    {
+        return self::withCount('usuarios')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function($rol) {
+                return [
+                    'id' => $rol->id,
+                    'nombre' => $rol->nombre,
+                    'total_usuarios' => $rol->usuarios_count
+                ];
+            });
     }
-    
+
     /**
      * Obtener rol por defecto (el más básico)
      */
-    public function getDefaultRol() {
-        $query = "SELECT * FROM roles WHERE nombre = 'inquilino' OR nombre = 'usuario' LIMIT 1";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getDefaultRol()
+    {
+        return self::where('nombre', 'inquilino')
+            ->orWhere('nombre', 'usuario')
+            ->first();
     }
 }

@@ -1,180 +1,188 @@
 <?php
-/**
- * Validador para la entidad Reseña
- * SOLO valida los datos, NO sanitiza
- */
 
-/**
- * Validar todos los datos de una reseña
- */
-function validarResena($data, $requerirId = false) {
-    $errores = [];
-    
-    // Validar ID (solo si se requiere)
-    if ($requerirId) {
-        $resultado = validarIdRequerido($data['id'] ?? null, 'reseña');
-        if (!$resultado['valido']) {
-            $errores['id'] = $resultado['error'];
+namespace App\Validators;
+
+class ResenaValidator
+{
+    /**
+     * Validar todos los datos de una reseña
+     */
+    public static function validar(array $data, bool $requerirId = false): array
+    {
+        $errores = [];
+
+        // Validar ID (solo si se requiere)
+        if ($requerirId) {
+            $error = self::validarId($data['id'] ?? null);
+            if ($error) {
+                $errores['id'] = $error;
+            }
         }
-    }
-    
-    // Validar reserva_id
-    $resultado = validarIdRequerido($data['reserva_id'] ?? null, 'reserva');
-    if (!$resultado['valido']) {
-        $errores['reserva_id'] = $resultado['error'];
-    }
-    
-    // Validar calificación
-    $resultado = validarCalificacion($data['calificacion'] ?? null);
-    if (!$resultado['valido']) {
-        $errores['calificacion'] = $resultado['error'];
-    }
-    
-    // Validar comentario (opcional)
-    if (isset($data['comentario']) && !empty($data['comentario'])) {
-        $resultado = validarComentario($data['comentario']);
-        if (!$resultado['valido']) {
-            $errores['comentario'] = $resultado['error'];
+
+        // Validar reserva_id
+        $error = self::validarReservaId($data['reserva_id'] ?? null);
+        if ($error) {
+            $errores['reserva_id'] = $error;
         }
+
+        // Validar calificación
+        $error = self::validarCalificacion($data['calificacion'] ?? null);
+        if ($error) {
+            $errores['calificacion'] = $error;
+        }
+
+        // Validar comentario (opcional)
+        if (isset($data['comentario']) && !empty($data['comentario'])) {
+            $error = self::validarComentario($data['comentario']);
+            if ($error) {
+                $errores['comentario'] = $error;
+            }
+        }
+
+        return $errores;
     }
-    
-    // Retornar resultado
-    if (count($errores) > 0) {
+
+    /**
+     * Validar ID
+     */
+    public static function validarId($id): ?string
+    {
+        if ($id === null || $id === '') {
+            return 'El ID de reseña es requerido';
+        }
+
+        if (!is_numeric($id)) {
+            return 'El ID debe ser un número';
+        }
+
+        if ($id <= 0) {
+            return 'El ID debe ser un número positivo';
+        }
+
+        return null;
+    }
+
+    /**
+     * Validar ID de reserva
+     */
+    public static function validarReservaId($id): ?string
+    {
+        if ($id === null || $id === '') {
+            return 'El ID de reserva es requerido';
+        }
+
+        if (!is_numeric($id)) {
+            return 'El ID de reserva debe ser un número';
+        }
+
+        if ($id <= 0) {
+            return 'El ID de reserva debe ser un número positivo';
+        }
+
+        return null;
+    }
+
+    /**
+     * Validar calificación
+     */
+    public static function validarCalificacion($calificacion): ?string
+    {
+        if ($calificacion === null || $calificacion === '') {
+            return 'La calificación es requerida';
+        }
+
+        if (!is_numeric($calificacion)) {
+            return 'La calificación debe ser un número';
+        }
+
+        $calificacion = (int)$calificacion;
+
+        if ($calificacion < 1 || $calificacion > 5) {
+            return 'La calificación debe ser entre 1 y 5 estrellas';
+        }
+
+        return null;
+    }
+
+    /**
+     * Validar comentario
+     */
+    public static function validarComentario($comentario): ?string
+    {
+        if ($comentario === null || $comentario === '') {
+            return null; // Comentario opcional
+        }
+
+        $comentarioLimpio = trim($comentario);
+
+        if (strlen($comentarioLimpio) < 3) {
+            return 'El comentario debe tener al menos 3 caracteres';
+        }
+
+        if (strlen($comentarioLimpio) > 1000) {
+            return 'El comentario no puede exceder los 1000 caracteres';
+        }
+
+        return null;
+    }
+
+    /**
+     * Validar para crear nueva reseña
+     */
+    public static function validarCrear(array $data): array
+    {
+        return self::validar($data, false);
+    }
+
+    /**
+     * Validar para actualizar reseña existente
+     */
+    public static function validarActualizar(array $data): array
+    {
+        return self::validar($data, true);
+    }
+
+    /**
+     * Validar solo ID
+     */
+    public static function validarSoloId($id): array
+    {
+        $error = self::validarId($id);
+
+        if ($error) {
+            return [
+                'success' => false,
+                'message' => 'ID inválido',
+                'errors' => ['id' => $error]
+            ];
+        }
+
         return [
-            'success' => false,
-            'message' => 'Error de validación',
-            'errors' => $errores
+            'success' => true,
+            'message' => 'ID válido',
+            'errors' => null
         ];
     }
-    
-    return [
-        'success' => true,
-        'message' => 'Validación exitosa',
-        'errors' => null
-    ];
-}
 
-/**
- * Validar ID requerido
- */
-function validarIdRequerido($id, $campo = '') {
-    if ($id === null || $id === '') {
-        $mensaje = $campo ? "El ID de $campo es requerido" : "El ID es requerido";
-        return ['valido' => false, 'error' => $mensaje];
-    }
-    
-    if (!is_numeric($id)) {
-        $mensaje = $campo ? "El ID de $campo debe ser un número" : "El ID debe ser un número";
-        return ['valido' => false, 'error' => $mensaje];
-    }
-    
-    if ($id <= 0) {
-        $mensaje = $campo ? "El ID de $campo debe ser positivo" : "El ID debe ser positivo";
-        return ['valido' => false, 'error' => $mensaje];
-    }
-    
-    return ['valido' => true, 'error' => null];
-}
+    /**
+     * Validar solo calificación
+     */
+    public static function validarSoloCalificacion($calificacion): array
+    {
+        $error = self::validarCalificacion($calificacion);
 
-/**
- * Validar calificación (1-5)
- */
-function validarCalificacion($calificacion) {
-    if ($calificacion === null || $calificacion === '') {
-        return ['valido' => false, 'error' => 'La calificación es requerida'];
-    }
-    
-    if (!is_numeric($calificacion)) {
-        return ['valido' => false, 'error' => 'La calificación debe ser un número'];
-    }
-    
-    $calificacion = (int)$calificacion;
-    
-    if ($calificacion < 1 || $calificacion > 5) {
-        return ['valido' => false, 'error' => 'La calificación debe ser entre 1 y 5 estrellas'];
-    }
-    
-    return ['valido' => true, 'error' => null];
-}
+        if ($error) {
+            return [
+                'success' => false,
+                'message' => 'Calificación inválida',
+                'errors' => ['calificacion' => $error]
+            ];
+        }
 
-/**
- * Validar comentario
- */
-function validarComentario($comentario) {
-    if ($comentario === null || $comentario === '') {
-        return ['valido' => true, 'error' => null]; // Comentario opcional
-    }
-    
-    $comentarioLimpio = trim($comentario);
-    $longitud = strlen($comentarioLimpio);
-    
-    if ($longitud < 3) {
-        return ['valido' => false, 'error' => 'El comentario debe tener al menos 3 caracteres'];
-    }
-    
-    if ($longitud > 1000) {
-        return ['valido' => false, 'error' => 'El comentario no puede exceder los 1000 caracteres'];
-    }
-    
-    if (preg_match('/^\s*$/', $comentarioLimpio)) {
-        return ['valido' => false, 'error' => 'El comentario no puede estar vacío o contener solo espacios'];
-    }
-    
-    return ['valido' => true, 'error' => null];
-}
-
-/**
- * Validar para crear nueva reseña
- */
-function validarCrearResena($data) {
-    return validarResena($data, false);
-}
-
-/**
- * Validar para actualizar reseña existente
- */
-function validarActualizarResena($data) {
-    return validarResena($data, true);
-}
-
-/**
- * Validar solo ID
- */
-function validarSoloIdResena($id) {
-    $resultado = validarIdRequerido($id, 'reseña');
-    
-    if (!$resultado['valido']) {
         return [
-            'success' => false,
-            'message' => 'ID inválido',
-            'errors' => ['id' => $resultado['error']]
+            'success' => true,
+            'message' => 'Calificación válida',
+            'errors' => null
         ];
     }
-    
-    return [
-        'success' => true,
-        'message' => 'ID válido',
-        'errors' => null
-    ];
-}
-
-/**
- * Validar solo calificación
- */
-function validarSoloCalificacion($calificacion) {
-    $resultado = validarCalificacion($calificacion);
-    
-    if (!$resultado['valido']) {
-        return [
-            'success' => false,
-            'message' => 'Calificación inválida',
-            'errors' => ['calificacion' => $resultado['error']]
-        ];
-    }
-    
-    return [
-        'success' => true,
-        'message' => 'Calificación válida',
-        'errors' => null
-    ];
 }

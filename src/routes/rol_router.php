@@ -1,7 +1,4 @@
 <?php
-/**
- * Router de Roles
- */
 
 require_once SRC_PATH . 'controllers/RolController.php';
 
@@ -10,19 +7,21 @@ use App\Controllers\RolController;
 $controller = new RolController();
 $method = $_SERVER['REQUEST_METHOD'];
 
-// 1. Roles con conteo de usuarios: /api/roles/con-usuarios
+global $path;
+
+// 1. Roles con conteo de usuarios
 if ($path === '/api/roles/con-usuarios' && $method === 'GET') {
     $controller->indexWithCount();
     exit;
 }
 
-// 2. Rol por defecto: /api/roles/default
+// 2. Rol por defecto
 if ($path === '/api/roles/default' && $method === 'GET') {
     $controller->getDefault();
     exit;
 }
 
-// 3. CRUD general: /api/roles
+// 3. CRUD general
 if ($path === '/api/roles') {
     if ($method === 'GET') {
         $controller->index();
@@ -30,12 +29,12 @@ if ($path === '/api/roles') {
         $controller->store();
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Método no permitido"]);
+        echo json_encode(["error" => "Método no permitido. Use GET o POST"]);
     }
     exit;
 }
 
-// 4. CRUD con ID: /api/roles/{id}
+// 4. CRUD con ID
 if (preg_match('#^/api/roles/([0-9]+)$#', $path, $matches)) {
     $id = $matches[1];
     
@@ -47,11 +46,10 @@ if (preg_match('#^/api/roles/([0-9]+)$#', $path, $matches)) {
         $controller->delete($id);
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Método no permitido"]);
+        echo json_encode(["error" => "Método no permitido. Use GET, PUT o DELETE"]);
     }
     exit;
 }
 
-// Si no coincide ninguna ruta
 http_response_code(404);
 echo json_encode(["error" => "Ruta no encontrada"]);

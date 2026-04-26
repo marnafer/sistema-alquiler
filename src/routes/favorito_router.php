@@ -10,6 +10,8 @@ use App\Controllers\FavoritoController;
 $controller = new FavoritoController();
 $method = $_SERVER['REQUEST_METHOD'];
 
+global $path;
+
 // 1. --- GET favoritos por usuario ---
 // /api/usuarios/{id}/favoritos
 if (preg_match('#^/api/usuarios/([0-9]+)/favoritos$#', $path, $matches)) {
@@ -19,7 +21,7 @@ if (preg_match('#^/api/usuarios/([0-9]+)/favoritos$#', $path, $matches)) {
         $controller->listarFavoritos($usuarioId);
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Metodo $method no permitido"]);
+        echo json_encode(["error" => "Método $method no permitido"]);
     }
     exit;
 }
@@ -28,7 +30,11 @@ if (preg_match('#^/api/usuarios/([0-9]+)/favoritos$#', $path, $matches)) {
 // /api/favoritos
 if ($path === '/api/favoritos') {
 
-    if ($method === 'POST') {
+    if ($method === 'GET') {
+        // Listar todos los favoritos (opcional)
+        $controller->listarTodos();
+    
+    } elseif ($method === 'POST') {
         $controller->agregarFavorito();
 
     } elseif ($method === 'DELETE') {
@@ -36,7 +42,19 @@ if ($path === '/api/favoritos') {
 
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Método $method no permitido"]);
+        echo json_encode(["error" => "Método $method no permitido. Use GET, POST o DELETE"]);
     }
     exit;
 }
+
+// 3. --- ELIMINAR favorito específico por ID ---
+// /api/favoritos/{id}
+if (preg_match('#^/api/favoritos/([0-9]+)$#', $path, $matches) && $method === 'DELETE') {
+    $favoritoId = $matches[1];
+    $controller->eliminarFavoritoPorId($favoritoId);
+    exit;
+}
+
+// Si no coincide ninguna ruta
+http_response_code(404);
+echo json_encode(["error" => "Ruta no encontrada", "path" => $path, "method" => $method]);
