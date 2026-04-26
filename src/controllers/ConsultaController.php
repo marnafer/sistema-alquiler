@@ -12,6 +12,8 @@ require_once SRC_PATH . 'validators/ConsultaValidator.php';
 use App\Models\Consulta;
 use App\Models\Propiedad;
 use App\Models\Usuario;
+use App\Controllers\ConsultaSanitizer;
+use App\Validators\ConsultaValidator;
 
 class ConsultaController {
     
@@ -353,7 +355,7 @@ public function eliminar($id) {
             'message' => 'Consulta eliminada exitosamente'
         ], JSON_UNESCAPED_UNICODE);
 
-    } catch (\Exception $e) {
+    } catch (\Exception $e) {2
         http_response_code(500);
         echo json_encode([
             'success' => false,

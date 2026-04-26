@@ -76,7 +76,13 @@ elseif (strpos($path, '/api/propiedades') === 0) {
     exit;
 }
 
-// --- FAVORITOS ---
+// --- FAVORITOS (por usuario) ---
+elseif (preg_match('#^/api/usuarios/\d+/favoritos$#', $path)) {
+    require_once SRC_PATH . 'routes/favorito_router.php';
+    exit;
+}
+
+// --- FAVORITOS (general) ---
 elseif (strpos($path, '/api/favoritos') === 0) {
     require_once SRC_PATH . 'routes/favorito_router.php';
     exit;
