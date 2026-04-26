@@ -90,6 +90,9 @@ if (strpos($path_bruto, '/public') === 0) {
 // 4. NORMALIZACIÓN
 $path = '/' . trim((string)$path_bruto, "/");
 
+// Hacemos la variable $path global para que esté disponible en los routers
+$GLOBALS['path'] = $path;
+
 // ============================================
 // RUTAS DEL SISTEMA (respuestas rápidas)
 // ============================================
@@ -211,7 +214,16 @@ elseif (strpos($path, '/api/servicios') !== false) {
         renderError("Archivo de rutas no encontrado: servicio_router.php", 500, $path);
     }
 }
-// 10. Módulo Reservas
+// 10. Módulo Propiedad Servicio 
+elseif (strpos($path, '/api/propiedades-servicios') !== false) {
+    $routerPath = SRC_PATH . 'routes/propiedadservicio_router.php';
+    if (file_exists($routerPath)) {
+        require_once $routerPath;
+    } else {
+        renderError("Archivo de rutas no encontrado: propiedadservicio_router.php", 500, $path);
+    }
+}
+// 11. Módulo Reservas
 elseif (strpos($path, '/api/reservas') !== false) {
     $routerPath = SRC_PATH . 'routes/reserva_router.php';
     if (file_exists($routerPath)) {
@@ -220,7 +232,7 @@ elseif (strpos($path, '/api/reservas') !== false) {
         renderError("Archivo de rutas no encontrado: reserva_router.php", 500, $path);
     }
 }
-// 11. Módulo Reseñas
+// 12. Módulo Reseñas
 elseif (strpos($path, '/api/resenas') !== false) {
     $routerPath = SRC_PATH . 'routes/resena_router.php';
     if (file_exists($routerPath)) {
@@ -229,7 +241,7 @@ elseif (strpos($path, '/api/resenas') !== false) {
         renderError("Archivo de rutas no encontrado: resena_router.php", 500, $path);
     }
 }
-// 12. Módulo Consultas
+// 13. Módulo Consultas
 elseif (strpos($path, '/api/consultas') !== false) {
     $routerPath = SRC_PATH . 'routes/consulta_router.php';
     if (file_exists($routerPath)) {
@@ -238,7 +250,7 @@ elseif (strpos($path, '/api/consultas') !== false) {
         renderError("Archivo de rutas no encontrado: consulta_router.php", 500, $path);
     }
 }
-// 13. Módulo Roles
+// 14. Módulo Roles
 elseif (strpos($path, '/api/roles') !== false) {
     $routerPath = SRC_PATH . 'routes/rol_router.php';
     if (file_exists($routerPath)) {
@@ -247,7 +259,7 @@ elseif (strpos($path, '/api/roles') !== false) {
         renderError("Archivo de rutas no encontrado: rol_router.php", 500, $path);
     }
 }
-// 14. Módulo Debug
+// 15. Módulo Debug
 elseif (strpos($path, '/debug') !== false) {
     $routerPath = SRC_PATH . 'routes/debug_router.php';
     if (file_exists($routerPath)) {

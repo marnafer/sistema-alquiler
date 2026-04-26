@@ -1,6 +1,6 @@
 <?php
 /**
- * Router de PropiedadServicio
+ * Router RESTful del módulo de PropiedadServicio
  */
 
 require_once SRC_PATH . 'controllers/PropiedadServicioController.php';
@@ -8,67 +8,69 @@ require_once SRC_PATH . 'controllers/PropiedadServicioController.php';
 use App\Controllers\PropiedadServicioController;
 
 $controller = new PropiedadServicioController();
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// 1. Estadísticas: /api/propiedades-servicios/estadisticas
-if ($path === '/api/propiedades-servicios/estadisticas' && $method === 'GET') {
-    $controller->getEstadisticas();
-    exit;
-}
-
-// 2. Relaciones por propiedad: /api/propiedades-servicios/propiedad/{id}
-if (preg_match('#^/api/propiedades-servicios/propiedad/([0-9]+)$#', $path, $matches)) {
+// 1. --- RUTA ESPECIAL: Estadísticas (debe ir antes de las rutas con ID) ---
+if ($path === '/api/propiedades-servicios/estadisticas') {
     if ($method === 'GET') {
-        $controller->getByPropiedad($matches[1]);
-    } elseif ($method === 'DELETE') {
-        $controller->deleteByPropiedad($matches[1]);
+        $controller->getEstadisticas();
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Método no permitido"]);
+        echo json_encode(['error' => "Método $method no permitido en esta ruta"]);
     }
     exit;
 }
 
-// 3. Relaciones por servicio: /api/propiedades-servicios/servicio/{id}
-if (preg_match('#^/api/propiedades-servicios/servicio/([0-9]+)$#', $path, $matches) && $method === 'GET') {
-    $controller->getByServicio($matches[1]);
+// 2. --- RUTA ESPECIAL: Relaciones por servicio ---
+if (preg_match('#^/api/propiedades-servicios/servicio/([0-9]+)$#', $path, $matches)) {
+    $servicioId = (int)$matches[1];
+    if ($method === 'GET') {
+        $controller->getByServicio($servicioId);
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => "Método $method no permitido en esta ruta"]);
+    }
     exit;
 }
 
-// 4. Sincronizar servicios de una propiedad: /api/propiedades-servicios/sync/{propiedadId}
-if (preg_match('#^/api/propiedades-servicios/sync/([0-9]+)$#', $path, $matches) && $method === 'POST') {
-    $controller->sync($matches[1]);
+// 3. --- RUTA ESPECIAL: Relaciones por propiedad ---
+if (preg_match('#^/api/propiedades-servicios/propiedad/([0-9]+)$#', $path, $matches)) {
+    $propiedadId = (int)$matches[1];
+    
+    if ($method === 'GET') {
+        $controller->getByPropiedad($propiedadId);
+    } elseif ($method === 'DELETE') {
+        $controller->deleteByPropiedad($propiedadId);
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => "Método $method no permitido en esta ruta"]);
+    }
     exit;
 }
 
-// 5. CRUD general: /api/propiedades-servicios
-if ($path === '/api/propiedades-servicios') {
+// 4. --- RUTA ESPECIAL: Sincronizar servicios de una propiedad ---
+if (preg_match('#^/api/propiedades-servicios/sync/([0-9]+)$#', $path, $matches)) {
+    $propiedadId = $matches[1];
+    if ($method === 'POST') {
+        $controller->sync($propiedadId);
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => "Método $method no permitido en esta ruta"]);
+    }
+    exit;
+}
+
+
+// 5. --- API: PropiedadServicio General (/api/propiedades-servicios) ---
+if (trim($path) === '/api/propiedades-servicios') {
     if ($method === 'GET') {
         $controller->index();
     } elseif ($method === 'POST') {
         $controller->store();
     } else {
         http_response_code(405);
-        echo json_encode(["error" => "Método no permitido"]);
+        echo json_encode(['error' => "Método $method no permitido"]);
     }
     exit;
 }
 
-// 6. CRUD con ID: /api/propiedades-servicios/{id}
-if (preg_match('#^/api/propiedades-servicios/([0-9]+)$#', $path, $matches)) {
-    $id = $matches[1];
-    
-    if ($method === 'GET') {
-        $controller->show($id);
-    } elseif ($method === 'DELETE') {
-        $controller->delete($id);
-    } else {
-        http_response_code(405);
-        echo json_encode(["error" => "Método no permitido"]);
-    }
-    exit;
-}
-
-// Si no coincide ninguna ruta
-http_response_code(404);
-echo json_encode(["error" => "Ruta no encontrada"]);

@@ -1,221 +1,240 @@
 <?php
-/**
- * Modelo de PropiedadServicio (tabla pivote)
- */
 
 namespace App\Models;
 
-use PDO;
-use Exception;
+use Illuminate\Database\Eloquent\Model;
 
-class PropiedadServicioModel {
-    
-    private $db;
-    
-    public function __construct() {
-        global $db;
-        $this->db = $db;
+class PropiedadServicio extends Model
+{
+    protected $table = 'propiedad_servicio';
+    public $timestamps = false;
+
+    protected $fillable = ['propiedad_id', 'servicio_id'];
+
+    /**
+     * Relación con Propiedad
+     */
+    public function propiedad()
+    {
+        return $this->belongsTo(Propiedad::class, 'propiedad_id');
     }
-    
+
+    /**
+     * Relación con Servicio
+     */
+    public function servicio()
+    {
+        return $this->belongsTo(Servicio::class, 'servicio_id');
+    }
+
     /**
      * Obtener todas las relaciones
      */
-    public function getAll() {
-        $query = "SELECT ps.*, 
-                         p.titulo as propiedad_titulo,
-                         s.nombre as servicio_nombre
-                  FROM propiedad_servicio ps
-                  JOIN propiedades p ON ps.propiedad_id = p.id
-                  JOIN servicios s ON ps.servicio_id = s.id
-                  ORDER BY ps.id ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getAll()
+    {
+        return self::with(['propiedad', 'servicio'])
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function($relacion) {
+                return [
+                    'id' => $relacion->id,
+                    'propiedad_id' => $relacion->propiedad_id,
+                    'servicio_id' => $relacion->servicio_id,
+                    'propiedad_titulo' => $relacion->propiedad->titulo ?? null,
+                    'servicio_nombre' => $relacion->servicio->nombre ?? null
+                ];
+            });
     }
-    
+
     /**
      * Obtener una relación por ID
      */
-    public function getById($id) {
-        $query = "SELECT ps.*, 
-                         p.titulo as propiedad_titulo,
-                         s.nombre as servicio_nombre
-                  FROM propiedad_servicio ps
-                  JOIN propiedades p ON ps.propiedad_id = p.id
-                  JOIN servicios s ON ps.servicio_id = s.id
-                  WHERE ps.id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public static function getById($id)
+    {
+        $relacion = self::with(['propiedad', 'servicio'])->find($id);
+        
+        if (!$relacion) {
+            return null;
+        }
+        
+        return [
+            'id' => $relacion->id,
+            'propiedad_id' => $relacion->propiedad_id,
+            'servicio_id' => $relacion->servicio_id,
+            'propiedad_titulo' => $relacion->propiedad->titulo ?? null,
+            'servicio_nombre' => $relacion->servicio->nombre ?? null
+        ];
     }
-    
+
     /**
      * Obtener relaciones por propiedad
      */
-    public function getByPropiedad($propiedadId) {
-        $query = "SELECT ps.*, s.nombre as servicio_nombre
-                  FROM propiedad_servicio ps
-                  JOIN servicios s ON ps.servicio_id = s.id
-                  WHERE ps.propiedad_id = :propiedad_id
-                  ORDER BY s.nombre ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':propiedad_id' => $propiedadId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByPropiedad($propiedadId)
+    {
+        return self::where('propiedad_id', $propiedadId)
+            ->with('servicio')
+            ->orderBy('servicio_id', 'asc')
+            ->get()
+            ->map(function($relacion) {
+                return [
+                    'id' => $relacion->id,
+                    'propiedad_id' => $relacion->propiedad_id,
+                    'servicio_id' => $relacion->servicio_id,
+                    'servicio_nombre' => $relacion->servicio->nombre ?? null
+                ];
+            });
     }
-    
+
     /**
      * Obtener relaciones por servicio
      */
-    public function getByServicio($servicioId) {
-        $query = "SELECT ps.*, p.titulo as propiedad_titulo
-                  FROM propiedad_servicio ps
-                  JOIN propiedades p ON ps.propiedad_id = p.id
-                  WHERE ps.servicio_id = :servicio_id
-                  ORDER BY p.titulo ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':servicio_id' => $servicioId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public static function getByServicio($servicioId)
+    {
+        return self::where('servicio_id', $servicioId)
+            ->with('propiedad')
+            ->orderBy('propiedad_id', 'asc')
+            ->get()
+            ->map(function($relacion) {
+                return [
+                    'id' => $relacion->id,
+                    'propiedad_id' => $relacion->propiedad_id,
+                    'servicio_id' => $relacion->servicio_id,
+                    'propiedad_titulo' => $relacion->propiedad->titulo ?? null
+                ];
+            });
     }
-    
+
     /**
      * Crear una nueva relación
      */
-    public function create($data) {
-        $query = "INSERT INTO propiedad_servicio (propiedad_id, servicio_id) 
-                  VALUES (:propiedad_id, :servicio_id)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':propiedad_id' => $data['propiedad_id'],
-            ':servicio_id' => $data['servicio_id']
-        ]);
-        return $this->db->lastInsertId();
+    public static function createRelacion($data)
+    {
+        return self::create($data);
     }
-    
-    /**
-     * Eliminar una relación
-     */
-    public function delete($id) {
-        $query = "DELETE FROM propiedad_servicio WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':id' => $id]);
-    }
-    
-    /**
-     * Eliminar todas las relaciones de una propiedad
-     */
-    public function deleteByPropiedad($propiedadId) {
-        $query = "DELETE FROM propiedad_servicio WHERE propiedad_id = :propiedad_id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':propiedad_id' => $propiedadId]);
-    }
-    
-    /**
-     * Eliminar todas las relaciones de un servicio
-     */
-    public function deleteByServicio($servicioId) {
-        $query = "DELETE FROM propiedad_servicio WHERE servicio_id = :servicio_id";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([':servicio_id' => $servicioId]);
-    }
-    
+
     /**
      * Verificar si existe una relación
      */
-    public function exists($id) {
-        $query = "SELECT id FROM propiedad_servicio WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+    public static function exists($id)
+    {
+        return self::where('id', $id)->exists();
     }
-    
+
     /**
      * Verificar si ya existe una relación (para evitar duplicados)
      */
-    public function existsRelacion($propiedadId, $servicioId) {
-        $query = "SELECT id FROM propiedad_servicio 
-                  WHERE propiedad_id = :propiedad_id AND servicio_id = :servicio_id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([
-            ':propiedad_id' => $propiedadId,
-            ':servicio_id' => $servicioId
-        ]);
-        return $stmt->rowCount() > 0;
+    public static function existsRelacion($propiedadId, $servicioId)
+    {
+        return self::where('propiedad_id', $propiedadId)
+            ->where('servicio_id', $servicioId)
+            ->exists();
     }
-    
+
     /**
      * Obtener IDs de servicios por propiedad
      */
-    public function getServicioIdsByPropiedad($propiedadId) {
-        $query = "SELECT servicio_id FROM propiedad_servicio WHERE propiedad_id = :propiedad_id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':propiedad_id' => $propiedadId]);
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    public static function getServicioIdsByPropiedad($propiedadId)
+    {
+        return self::where('propiedad_id', $propiedadId)
+            ->pluck('servicio_id')
+            ->toArray();
     }
-    
+
     /**
-     * Sincronizar servicios de una propiedad (eliminar los que no están y agregar los nuevos)
+     * Sincronizar servicios de una propiedad
      */
-    public function syncServiciosByPropiedad($propiedadId, $serviciosIds) {
+    public static function syncServiciosByPropiedad($propiedadId, $serviciosIds)
+    {
         // Eliminar relaciones existentes
-        $this->deleteByPropiedad($propiedadId);
+        self::where('propiedad_id', $propiedadId)->delete();
         
         // Agregar nuevas relaciones
         $count = 0;
         foreach ($serviciosIds as $servicioId) {
-            $data = [
+            self::create([
                 'propiedad_id' => $propiedadId,
                 'servicio_id' => $servicioId
-            ];
-            $this->create($data);
+            ]);
             $count++;
         }
         
         return $count;
     }
-    
+
     /**
      * Obtener estadísticas de relaciones
      */
-    public function getEstadisticas() {
+    public static function getEstadisticas()
+    {
         $estadisticas = [];
         
         // Total de relaciones
-        $query = "SELECT COUNT(*) as total FROM propiedad_servicio";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['total_relaciones'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $estadisticas['total_relaciones'] = self::count();
         
         // Promedio de servicios por propiedad
-        $query = "SELECT AVG(total) as promedio 
-                  FROM (SELECT COUNT(*) as total 
-                        FROM propiedad_servicio 
-                        GROUP BY propiedad_id) as sub";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['promedio_servicios_por_propiedad'] = round($stmt->fetch(PDO::FETCH_ASSOC)['promedio'] ?? 0, 2);
+        $promedio = self::selectRaw('propiedad_id, COUNT(*) as total')
+            ->groupBy('propiedad_id')
+            ->get()
+            ->avg('total');
+        
+        $estadisticas['promedio_servicios_por_propiedad'] = round($promedio ?? 0, 2);
         
         // Propiedad con más servicios
-        $query = "SELECT p.titulo, COUNT(ps.servicio_id) as total_servicios
-                  FROM propiedad_servicio ps
-                  JOIN propiedades p ON ps.propiedad_id = p.id
-                  GROUP BY ps.propiedad_id
-                  ORDER BY total_servicios DESC
-                  LIMIT 1";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['propiedad_max_servicios'] = $stmt->fetch(PDO::FETCH_ASSOC);
+        $propiedadMax = self::selectRaw('propiedad_id, COUNT(*) as total_servicios')
+            ->with('propiedad')
+            ->groupBy('propiedad_id')
+            ->orderBy('total_servicios', 'desc')
+            ->first();
+        
+        if ($propiedadMax && $propiedadMax->propiedad) {
+            $estadisticas['propiedad_max_servicios'] = [
+                'titulo' => $propiedadMax->propiedad->titulo,
+                'total_servicios' => $propiedadMax->total_servicios
+            ];
+        } else {
+            $estadisticas['propiedad_max_servicios'] = null;
+        }
         
         // Servicio más usado
-        $query = "SELECT s.nombre, COUNT(ps.propiedad_id) as total_propiedades
-                  FROM propiedad_servicio ps
-                  JOIN servicios s ON ps.servicio_id = s.id
-                  GROUP BY ps.servicio_id
-                  ORDER BY total_propiedades DESC
-                  LIMIT 1";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $estadisticas['servicio_mas_usado'] = $stmt->fetch(PDO::FETCH_ASSOC);
+        $servicioMax = self::selectRaw('servicio_id, COUNT(*) as total_propiedades')
+            ->with('servicio')
+            ->groupBy('servicio_id')
+            ->orderBy('total_propiedades', 'desc')
+            ->first();
+        
+        if ($servicioMax && $servicioMax->servicio) {
+            $estadisticas['servicio_mas_usado'] = [
+                'nombre' => $servicioMax->servicio->nombre,
+                'total_propiedades' => $servicioMax->total_propiedades
+            ];
+        } else {
+            $estadisticas['servicio_mas_usado'] = null;
+        }
         
         return $estadisticas;
+    }
+
+    /**
+     * Eliminar una relación
+     */
+    public static function deleteRelacion($id)
+    {
+        return self::where('id', $id)->delete();
+    }
+
+    /**
+     * Eliminar todas las relaciones de una propiedad
+     */
+    public static function deleteByPropiedad($propiedadId)
+    {
+        return self::where('propiedad_id', $propiedadId)->delete();
+    }
+
+    /**
+     * Eliminar todas las relaciones de un servicio
+     */
+    public static function deleteByServicio($servicioId)
+    {
+        return self::where('servicio_id', $servicioId)->delete();
     }
 }
