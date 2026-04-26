@@ -2,65 +2,46 @@
 
 declare(strict_types=1);
 
-// ============================================
-// FUNCIONES GLOBALES (disponibles para todo)
-// ============================================
-
-/**
- * Enviar respuesta JSON exitosa
- */
-function renderJson(array $data, int $code = 200): void {
-    header("Content-Type: application/json; charset=utf-8");
-    http_response_code($code);
-    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-/**
- * Enviar respuesta JSON de error
- */
-function renderError(string $message, int $code, ?string $pathDetectado = null): void {
-    $data = ["error" => $message];
-    if ($pathDetectado !== null) {
-        $data["path_detectado"] = $pathDetectado;
-    }
-    renderJson($data, $code);
-}
-
-// ============================================
-// CONFIGURACIÓN INICIAL
-// ============================================
-
-// Cargamos el Autoload de Composer
 require_once __DIR__ . '/../vendor/autoload.php';
-
-// Cargamos el Capsule Manager para la DB
 require_once __DIR__ . '/../src/database.php';
 
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 error_reporting(E_ALL);
 
-// Definimos la ruta absoluta hacia la carpeta src
 define('SRC_PATH', dirname(__DIR__) . '/src/');
 
 ini_set('display_errors', 1);
 
-// ============================================
-// DEBUG (solo en desarrollo)
-// ============================================
+// --- CONFIGURACIÓN ---
 
-// Cargar la clase Debugger
+$method = strtoupper(trim($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+
+$path_bruto = parse_url($requestUri, PHP_URL_PATH);
+
+$scriptName = $_SERVER['SCRIPT_NAME'];
+$baseDir = str_replace('\\', '/', dirname(dirname($scriptName)));
+
+if ($baseDir !== '/' && strpos($path_bruto, $baseDir) === 0) {
+    $path_bruto = substr($path_bruto, strlen($baseDir));
+}
+
+if (strpos($path_bruto, '/public') === 0) {
+    $path_bruto = substr($path_bruto, strlen('/public'));
+}
+
+$path = '/' . trim((string)$path_bruto, "/");
+
+// --- DEBUG ---
 require_once dirname(__DIR__) . '/src/debug/Debugger.php';
 
 use App\Debug\Debugger;
 
-// Activar debug SOLO en desarrollo (localhost)
 if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
     Debugger::setEnabled(true);
     Debugger::enableErrorReporting();
 }
 
-// Registrar la petición
 Debugger::request();
 
 // ============================================
@@ -97,122 +78,88 @@ $GLOBALS['path'] = $path;
 // RUTAS DEL SISTEMA (respuestas rápidas)
 // ============================================
 
+// Health
 if ($path === '/health') {
     renderJson([
-        'status'    => 'ok',
+        'status' => 'ok',
         'timestamp' => date('Y-m-d H:i:s'),
-        'php'       => phpversion()
+        'php' => phpversion()
     ]);
+    exit;
 }
 
+// Home
 if ($path === '/') {
     renderJson([
         'message' => 'API Alquiler Permanente funcionando',
         'endpoints' => [
-            '/health',
-            '/api/categorias',
-            '/api/provincias',
-            '/api/localidades',
-            '/api/usuarios',
             '/api/propiedades',
-            '/api/servicios',
-            '/api/propiedades-servicios',
-            '/api/reservas',
-            '/api/resenas',
-            '/api/consultas',
-            '/api/favoritos',
-            '/api/logs-actividad',
-            '/api/roles',
-            '/api/propiedades-imagen',
-            '/api/debug/stats'
+            '/api/categorias',
+            '/api/localidades',
+            '/api/usuarios'
         ]
     ]);
+    exit;
 }
 
-// ============================================
-// RUTAS DE LA API
-// ============================================
+// --- PROPIEDADES ---
+elseif (strpos($path, '/api/propiedades') === 0) {
+    require_once SRC_PATH . 'routes/propiedad_router.php';
+    exit;
+}
 
-// 1. Módulo de Propiedades
-if (strpos($path, '/propiedades') !== false) {
-    $routerPath = SRC_PATH . 'routes/propiedad_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: propiedad_router.php", 500, $path);
-    }
+// --- FAVORITOS (por usuario) ---
+elseif (preg_match('#^/api/usuarios/\d+/favoritos$#', $path)) {
+    require_once SRC_PATH . 'routes/favorito_router.php';
+    exit;
 }
-// 2. Módulo Favoritos
-elseif (strpos($path, '/favoritos') !== false) {
-    $routerPath = SRC_PATH . 'routes/favorito_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: favorito_router.php", 500, $path);
-    }
+
+// --- FAVORITOS (general) ---
+elseif (strpos($path, '/api/favoritos') === 0) {
+    require_once SRC_PATH . 'routes/favorito_router.php';
+    exit;
 }
-// 3. Módulo Usuarios
-elseif (strpos($path, '/usuarios') !== false) {
-    $routerPath = SRC_PATH . 'routes/usuario_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: usuario_router.php", 500, $path);
-    }
+
+// --- USUARIOS ---
+elseif (strpos($path, '/api/usuarios') === 0) {
+    require_once SRC_PATH . 'routes/usuario_router.php';
+    exit;
 }
-// 4. Módulo Logs de Actividad
-elseif (strpos($path, '/logs') !== false || strpos($path, '/logs-actividad') !== false) {
-    $routerPath = SRC_PATH . 'routes/log_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: log_router.php", 500, $path);
-    }
+
+// --- LOGS ---
+elseif (strpos($path, '/api/logs') === 0 || strpos($path, '/api/logs-actividad') === 0) {
+    require_once SRC_PATH . 'routes/log_router.php';
+    exit;
 }
-// 5. Módulo Localidades
-elseif (strpos($path, '/localidades') !== false) {
-    $routerPath = SRC_PATH . 'routes/localidad_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: localidad_router.php", 500, $path);
-    }
+
+// --- LOCALIDADES ---
+elseif (strpos($path, '/api/localidades') === 0) {
+    require_once SRC_PATH . 'routes/localidad_router.php';
+    exit;
 }
-// 6. Módulo Propiedad Imágenes
-elseif (strpos($path, '/propiedad-imagenes') !== false || strpos($path, '/propiedades/imagenes') !== false) {
-    $routerPath = SRC_PATH . 'routes/propiedadImagen_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: propiedadImagen_router.php", 500, $path);
-    }
+
+// --- PROPIEDAD IMÁGENES ---
+elseif (strpos($path, '/api/propiedad-imagenes') === 0) {
+    require_once SRC_PATH . 'routes/propiedadImagen_router.php';
+    exit;
 }
-// 7. Módulo Categorías
-elseif (strpos($path, '/api/categorias') !== false) {
-    $routerPath = SRC_PATH . 'routes/categoria_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: categoria_router.php", 500, $path);
-    }
+
+// --- CATEGORÍAS ---
+elseif (strpos($path, '/api/categorias') === 0) {
+    require_once SRC_PATH . 'routes/categoria_router.php';
+    exit;
 }
-// 8. Módulo Provincias
-elseif (strpos($path, '/api/provincias') !== false) {
-    $routerPath = SRC_PATH . 'routes/provincia_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: provincia_router.php", 500, $path);
-    }
+
+// --- PROVINCIAS ---
+elseif (strpos($path, '/api/provincias') === 0) {
+    require_once SRC_PATH . 'routes/provincia_router.php';
+    exit;
 }
-// 9. Módulo Servicios
-elseif (strpos($path, '/api/servicios') !== false) {
-    $routerPath = SRC_PATH . 'routes/servicio_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: servicio_router.php", 500, $path);
-    }
+
+// --- SERVICIOS ---
+elseif (strpos($path, '/api/servicios') === 0) {
+    require_once SRC_PATH . 'routes/servicio_router.php';
+    exit;
 }
 // 10. Módulo Propiedad Servicio 
 elseif (strpos($path, '/api/propiedades-servicios') !== false) {
@@ -272,5 +219,23 @@ elseif (strpos($path, '/debug') !== false) {
 // RUTA NO ENCONTRADA (404)
 // ============================================
 else {
-    renderError("Ruta no encontrada", 404, $path);
+    renderError("Ruta no encontrada", 404);
+    exit;
+}
+
+// --- HELPERS ---
+
+function renderJson(array $data, int $code = 200): void {
+    header("Content-Type: application/json; charset=utf-8");
+    http_response_code($code);
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function renderError(string $message, int $code): void {
+    renderJson([
+        'success' => false,
+        'error' => $message,
+        'path' => $GLOBALS['path'] ?? null
+    ], $code);
 }

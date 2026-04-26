@@ -19,4 +19,5 @@ class Categoria extends Model
     {
         return $this->hasMany(Propiedad::class, 'categoria_id');
     }
+    
 }

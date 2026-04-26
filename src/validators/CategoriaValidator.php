@@ -1,56 +1,69 @@
 <?php
-/**
- * Validador para la entidad Categoría
- * SOLO valida los datos, NO sanitiza
- */
 
-function validarCategoria($data, $requerirId = false) {
-    $errores = [];
-    
-    // Validar ID (solo si se requiere)
-    if ($requerirId) {
-        if (!isset($data['id']) || empty($data['id'])) {
-            $errores['id'] = 'El ID de categoría es requerido';
-        } elseif (!is_numeric($data['id']) || $data['id'] <= 0) {
-            $errores['id'] = 'El ID de categoría debe ser un número positivo';
+namespace App\Validators;
+
+class CategoriaValidator
+{
+    /**
+     * Valida ID (entero positivo)
+     * Retorna ['success'=>bool, 'error'=>string|null]
+     */
+    public static function validarId($id): array
+    {
+        if ($id === null || $id === '') {
+            return ['success' => false, 'error' => 'El ID es requerido'];
         }
-    }
-    
-    // Validar nombre
-    if (!isset($data['nombre']) || empty(trim($data['nombre']))) {
-        $errores['nombre'] = 'El nombre de la categoría es requerido';
-    } else {
-        $nombreLimpio = trim($data['nombre']);
-        $longitud = strlen($nombreLimpio);
-        
-        if ($longitud < 3) {
-            $errores['nombre'] = 'El nombre debe tener al menos 3 caracteres';
-        } elseif ($longitud > 50) {
-            $errores['nombre'] = 'El nombre no puede exceder los 50 caracteres';
-        } elseif (!preg_match('/^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s]+$/u', $nombreLimpio)) {
-            $errores['nombre'] = 'El nombre solo puede contener letras y espacios';
+        if (!is_numeric($id) || (int)$id <= 0) {
+            return ['success' => false, 'error' => 'El ID debe ser un entero positivo'];
         }
+        return ['success' => true, 'error' => null];
     }
-    
-    if (count($errores) > 0) {
-        return [
-            'success' => false,
-            'message' => 'Error de validación',
-            'errors' => $errores
-        ];
+
+    /**
+     * Valida nombre de categoría
+     */
+    public static function validarNombre(?string $nombre): array
+    {
+        if ($nombre === null || $nombre === '') {
+            return ['success' => false, 'error' => 'El nombre de la categoría es requerido'];
+        }
+
+        $len = mb_strlen($nombre);
+        if ($len < 3) {
+            return ['success' => false, 'error' => 'El nombre debe tener al menos 3 caracteres'];
+        }
+        if ($len > 50) {
+            return ['success' => false, 'error' => 'El nombre no puede exceder los 50 caracteres'];
+        }
+
+        // Permitir letras Unicode, números, espacios, guiones y &
+        if (!preg_match('/^[\p{L}\p{N}\s\-\&]+$/u', $nombre)) {
+            return ['success' => false, 'error' => 'El nombre solo puede contener letras, números, espacios, guiones y &'];
+        }
+
+        return ['success' => true, 'error' => null];
     }
-    
-    return [
-        'success' => true,
-        'message' => 'Validación exitosa',
-        'errors' => null
-    ];
-}
 
-function validarCrearCategoria($data) {
-    return validarCategoria($data, false);
-}
+    /**
+     * Valida payload completo. Espera datos ya sanitizados.
+     * Retorna ['success'=>bool, 'errors'=>array|null, 'data'=>array|null]
+     */
+    public static function validarCategoria(array $data, bool $requerirId = false): array
+    {
+        $errores = [];
 
-function validarActualizarCategoria($data) {
-    return validarCategoria($data, true);
+        if ($requerirId) {
+            $resId = self::validarId($data['id'] ?? null);
+            if (!$resId['success']) $errores['id'] = $resId['error'];
+        }
+
+        $resNombre = self::validarNombre($data['nombre'] ?? null);
+        if (!$resNombre['success']) $errores['nombre'] = $resNombre['error'];
+
+        if (!empty($errores)) {
+            return ['success' => false, 'errors' => $errores, 'data' => null];
+        }
+
+        return ['success' => true, 'errors' => null, 'data' => $data];
+    }
 }

@@ -10,6 +10,7 @@ use App\Controllers\CategoriaController;
 $controller = new CategoriaController();
 $method = $_SERVER['REQUEST_METHOD'];
 
+
 // 1. --- RUTA DE API CON ID: /api/categorias/{id} ---
 if (preg_match('#^/api/categorias/([0-9]+)$#', $path, $matches)) {
     $categoriaId = $matches[1];

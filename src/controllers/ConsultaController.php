@@ -6,32 +6,30 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/consulta_sanitizer.php';
-
+require_once SRC_PATH . 'sanitizers/ConsultaSanitizer.php';
+require_once SRC_PATH . 'validators/ConsultaValidator.php';
 
 use App\Models\Consulta;
+use App\Models\Propiedad;
+use App\Models\Usuario;
+use App\Controllers\ConsultaSanitizer;
+use App\Validators\ConsultaValidator;
 
 class ConsultaController {
-    
-    private $model;
-    
-    public function __construct() {
-        $this->model = new Consulta();
-        header('Content-Type: application/json');
-    }
     
     /**
      * Listar todas las consultas
      * GET /api/consultas
      */
+
     public function listar() {
         try {
-            $consultas = $this->model->listar();
+            $consultas = Consulta::all();
             
             echo json_encode([
                 'success' => true,
                 'data' => $consultas,
-                'total' => count($consultas)
+                'total' => $consultas->count()
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -48,14 +46,15 @@ class ConsultaController {
      */
     public function obtener($id) {
         try {
-            $resultadoId = validarIdConsultaRequerido($id);
+            $resultadoId = validarConsultaId($id);
+
             if (!$resultadoId['success']) {
                 http_response_code(400);
                 echo json_encode($resultadoId, JSON_UNESCAPED_UNICODE);
                 return;
             }
             
-            $consulta = $this->model->obtener($id);
+            $consulta = Consulta::find($id);
             
             if ($consulta) {
                 echo json_encode([
@@ -83,36 +82,58 @@ class ConsultaController {
      * GET /api/consultas/propiedad/{id}
      */
     public function listarPorPropiedad($propiedadId) {
-        try {
-            $consultas = $this->model->listarPorPropiedad($propiedadId);
-            
-            echo json_encode([
-                'success' => true,
-                'data' => $consultas,
-                'total' => count($consultas),
-                'propiedad_id' => $propiedadId
-            ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
+    try {
+        if (!Propiedad::find($propiedadId)) {
+            http_response_code(404);
             echo json_encode([
                 'success' => false,
-                'error' => $e->getMessage()
-            ], JSON_UNESCAPED_UNICODE);
+                'error' => 'Propiedad no encontrada'
+            ]);
+            return;
         }
+
+        $consultas = Consulta::where('propiedad_id', $propiedadId)->get();
+
+        echo json_encode([
+            'success' => true,
+            'data' => $consultas,
+            'total' => $consultas->count(),
+            'propiedad_id' => $propiedadId
+        ]);
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
     }
+}
     
     /**
      * Listar consultas por inquilino
      * GET /api/consultas/inquilino/{id}
      */
     public function listarPorInquilino($inquilinoId) {
-        try {
-            $consultas = $this->model->listarPorInquilino($inquilinoId);
+        try {            
+            $inquilino = Usuario::where('id', $inquilinoId)  // Valida si existe y tiene rol de inquilino
+                ->where('rol_id', 2) // rol 2 = inquilino
+                ->first();
+
+            if (!$inquilino) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'El inquilino no existe o no es válido'
+                ]);
+                return;
+            }
+
+            $consultas = Consulta::where('inquilino_id', $inquilinoId)->get();
             
             echo json_encode([
                 'success' => true,
                 'data' => $consultas,
-                'total' => count($consultas),
+                'total' => $consultas->count(),
                 'inquilino_id' => $inquilinoId
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
@@ -129,156 +150,217 @@ class ConsultaController {
      * POST /api/consultas
      */
     public function crear() {
-        $data = json_decode(file_get_contents('php://input'), true);
-        
-        if (!$data) {
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'error' => 'Datos inválidos o no proporcionados'
-            ], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-        
-        // Validar datos
-        $resultadoValidacion = validarConsulta($data);
-        
-        if (!$resultadoValidacion['success']) {
-            http_response_code(400);
-            echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
-            return;
-        }
-        
-        try {
-            // Verificar que la propiedad existe
-            $propiedad = $this->model->propiedadExiste($resultadoValidacion['data']['propiedad_id']);
-            if (!$propiedad) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'La propiedad no existe o no está disponible'
-                ], JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            // Verificar que el inquilino existe
-            $inquilino = $this->model->inquilinoExiste($resultadoValidacion['data']['inquilino_id']);
-            if (!$inquilino) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'El inquilino no existe'
-                ], JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            // Crear consulta
-            $id = $this->model->crear($resultadoValidacion['data']);
-            $resultadoValidacion['data']['id'] = $id;
-            $resultadoValidacion['data']['fecha_consulta'] = date('Y-m-d H:i:s');
-            
-            http_response_code(201);
-            echo json_encode([
-                'success' => true,
-                'message' => 'Consulta creada exitosamente',
-                'data' => $resultadoValidacion['data']
-            ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], JSON_UNESCAPED_UNICODE);
-        }
+    header('Content-Type: application/json; charset=utf-8');
+
+    $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Datos inválidos o no proporcionados'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
     }
+
+    // Validación
+    $resultadoValidacion = validarConsulta($data);
+
+    if (!$resultadoValidacion['success']) {
+        http_response_code(400);
+        echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
+    $dataValida = $resultadoValidacion['data'];
+
+    try {
+        // Verificar propiedad (y opcionalmente que esté disponible)
+        $propiedad = Propiedad::where('id', $dataValida['propiedad_id'])
+            ->whereNull('deleted_at') // soft delete
+            ->first();
+
+        if (!$propiedad) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'La propiedad no existe o no está disponible'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Verificar inquilino (según rol)
+        $inquilino = Usuario::where('id', $dataValida['inquilino_id'])
+            ->where('rol_id', 2) // rol 2 = inquilino
+            ->whereNull('deleted_at') // opcional
+            ->first();
+
+        if (!$inquilino) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'El inquilino no existe o no es válido'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Crear consulta con Eloquent
+        $consulta = Consulta::create([
+            'propiedad_id'   => $dataValida['propiedad_id'],
+            'inquilino_id'   => $dataValida['inquilino_id'],
+            'mensaje'        => $dataValida['mensaje'],
+            'fecha_consulta' => date('Y-m-d H:i:s')
+        ]);
+
+        http_response_code(201);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Consulta creada exitosamente',
+            'data' => $consulta
+        ], JSON_UNESCAPED_UNICODE);
+
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
     
     /**
-     * Actualizar una consulta
-     * PUT /api/consultas/{id}
-     */
-    public function actualizar($id) {
-        $data = json_decode(file_get_contents('php://input'), true);
-        
-        if (!$data) {
-            http_response_code(400);
-            echo json_encode([
-                'success' => false,
-                'error' => 'Datos inválidos o no proporcionados'
-            ], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-        
-        $data['id'] = $id;
-        $resultadoValidacion = validarConsulta($data);
-        
-        if (!$resultadoValidacion['success']) {
-            http_response_code(400);
-            echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
-            return;
-        }
-        
-        try {
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Consulta no encontrada'
-                ], JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            $this->model->actualizar($id, $resultadoValidacion['data']);
-            
-            echo json_encode([
-                'success' => true,
-                'message' => 'Consulta actualizada exitosamente',
-                'data' => $resultadoValidacion['data']
-            ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], JSON_UNESCAPED_UNICODE);
-        }
+ * Actualizar una consulta
+ * PUT /api/consultas/{id}
+ */
+public function actualizar($id) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Datos inválidos o no proporcionados'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
     }
+
+    $data['id'] = $id;
+    $resultadoValidacion = validarConsulta($data, true);
+
+    if (!$resultadoValidacion['success']) {
+        http_response_code(400);
+        echo json_encode($resultadoValidacion, JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
+    $dataValida = $resultadoValidacion['data'];
+
+    try {
+        // Buscar consulta
+        $consulta = Consulta::find($id);
+
+        if (!$consulta) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Consulta no encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Validar que la propiedad existe
+        if (!Propiedad::where('id', $dataValida['propiedad_id'])->exists()) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'La propiedad no existe'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Validar que el usuario es inquilino
+        if (!Usuario::where('id', $dataValida['inquilino_id'])
+            ->where('rol_id', 2) // 👈 ajustá según tu sistema
+            ->exists()) {
+
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'El inquilino no existe o no es válido'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Actualizar con Eloquent
+        $consulta->update([
+            'propiedad_id' => $dataValida['propiedad_id'],
+            'inquilino_id' => $dataValida['inquilino_id'],
+            'mensaje' => $dataValida['mensaje']
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Consulta actualizada exitosamente',
+            'data' => $consulta // devuelve el modelo actualizado
+        ], JSON_UNESCAPED_UNICODE);
+
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
     
     /**
-     * Eliminar una consulta (soft delete)
-     * DELETE /api/consultas/{id}
-     */
-    public function eliminar($id) {
-        try {
-            $resultadoId = validarIdConsultaRequerido($id);
-            if (!$resultadoId['success']) {
-                http_response_code(400);
-                echo json_encode($resultadoId, JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            // Verificar si existe
-            if (!$this->model->existe($id)) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Consulta no encontrada'
-                ], JSON_UNESCAPED_UNICODE);
-                return;
-            }
-            
-            $this->model->eliminar($id);
-            
-            echo json_encode([
-                'success' => true,
-                'message' => 'Consulta eliminada exitosamente'
-            ], JSON_UNESCAPED_UNICODE);
-        } catch (\Exception $e) {
-            http_response_code(500);
+ * Eliminar una consulta (soft delete)
+ * DELETE /api/consultas/{id}
+ */
+public function eliminar($id) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        // Validar ID
+        $resultadoId = validarConsultaId($id);
+
+        if (!$resultadoId['success']) {
+            http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $resultadoId['error']
             ], JSON_UNESCAPED_UNICODE);
+            return;
         }
+
+        // Buscar consulta
+        $consulta = \App\Models\Consulta::find($id);
+
+        if (!$consulta) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Consulta no encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Eliminamos consulta
+        $consulta->delete();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Consulta eliminada exitosamente'
+        ], JSON_UNESCAPED_UNICODE);
+
+    } catch (\Exception $e) {2
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
     }
+}
 }
