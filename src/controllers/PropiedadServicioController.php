@@ -210,7 +210,6 @@ class PropiedadServicioController {
     
     /**
      * POST /api/propiedades-servicios/sync/{propiedadId}
-     * Sincronizar servicios de una propiedad (reemplaza todos)
      */
     public function sync($propiedadId) {
         $data = json_decode(file_get_contents('php://input'), true);
