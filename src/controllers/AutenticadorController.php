@@ -9,11 +9,12 @@ class AutenticadorController {
 
     // LOGIN
     public function login() {
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
         $email = $data['email'] ?? null;
         $password = $data['password'] ?? null;
 
+        // 1. Validar que vengan los datos
         if (!$email || !$password) {
             renderJson([
                 'success' => false,
@@ -21,12 +22,22 @@ class AutenticadorController {
             ], 400);
         }
 
+        // 2. Sanitizar email
+        $email = sanitizarSoloEmail($email);
+
+        // 3. Validar formato de email
+        $validacionEmail = validarEmailLoginUsuario($email);
+
+        if (!$validacionEmail['success']) {
+            renderJson($validacionEmail, 400);
+        }
+
         $usuario = Usuario::where('email', $email)->first();
 
         if (!$usuario || !password_verify($password, $usuario->contrasena)) {
             renderJson([
                 'success' => false,
-                'error' => 'Credenciales inválidas'
+                'error' => 'Credenciales invalidas'
             ], 401);
         }
 
@@ -40,27 +51,30 @@ class AutenticadorController {
 
     // REGISTER
     public function register() {
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$data['email'] || !$data['password']) {
-            renderJson([
-                'success' => false,
-                'error' => 'Datos incompletos'
-            ], 400);
+        // 1. Sanitizar
+        $san = sanitizarUsuario($data);
+
+        // 2. Validar datos
+        $val = validarCrearUsuario($san);
+
+        if (!$val['success']) {
+            renderJson($val, 400);
         }
 
-        if (Usuario::where('email', $data['email'])->exists()) {
+        // 3. ValidaciÃ³n de negocio (DB)
+        if (Usuario::where('email', $san['email'])->exists()) {
             renderJson([
                 'success' => false,
                 'error' => 'El usuario ya existe'
-            ], 400);
+            ], 409); 
         }
 
-        $usuario = new Usuario();
-        $usuario->email = $data['email'];
-        $usuario->contrasena = password_hash($data['password'], PASSWORD_BCRYPT);
-        $usuario->rol_id = 1;
-        $usuario->save();
+        $san['contrasena'] = password_hash($san['contrasena'], PASSWORD_BCRYPT);
+        $san['rol_id'] = $san['rol_id'] ?? 1;
+
+        $usuario = Usuario::create($san);
 
         renderJson([
             'success' => true,

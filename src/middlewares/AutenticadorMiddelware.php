@@ -7,24 +7,29 @@ use App\Helpers\JwtHelper;
 class AutenticadorMiddleware {
 
     public static function verificar() {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] 
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
+            ?? null;
 
         if (!$authHeader) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Token requerido']);
-            exit;
+            renderJson([
+                'success' => false,
+                'error' => 'Token requerido'
+            ], 401);
         }
 
         $token = str_replace('Bearer ', '', $authHeader);
 
         try {
             $user = JwtHelper::validarToken($token);
-
             return $user;
+
         } catch (\Exception $e) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Token inválido']);
-            exit;
+            renderJson([
+                'success' => false,
+                'error' => 'Token invÃ¡lido'
+                // opcional: $e->getMessage()
+            ], 401);
         }
     }
 
@@ -32,9 +37,10 @@ class AutenticadorMiddleware {
         $user = self::verificar();
 
         if ($user->rol_id != 2) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Solo propietarios']);
-            exit;
+            renderJson([
+                'success' => false,
+                'error' => 'Solo propietarios'
+            ], 403);
         }
 
         return $user;
@@ -44,9 +50,10 @@ class AutenticadorMiddleware {
         $user = self::verificar();
 
         if ($user->rol_id != 1) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Solo inquilinos']);
-            exit;
+            renderJson([
+                'success' => false,
+                'error' => 'Solo inquilinos'
+            ], 403);
         }
 
         return $user;
@@ -55,10 +62,11 @@ class AutenticadorMiddleware {
     public static function soloAdmin() {
         $user = self::verificar();
 
-        if ($user->rol != 3) {
-            http_response_code(403);
-            renderJson(['error' => 'Solo administradores'], 403);
-            exit;
+        if ($user->rol_id != 3) {
+            renderJson([
+                'success' => false,
+                'error' => 'Solo administradores'
+            ], 403);
         }
 
         return $user;

@@ -42,7 +42,7 @@ class PropiedadController {
     public function indexApi() {
 
         try {
-            $propiedades = Propiedad::all();
+            $propiedades = Propiedad::whereNull('deleted_at')->get();
 
             renderJson([
                 'status' => 'success',

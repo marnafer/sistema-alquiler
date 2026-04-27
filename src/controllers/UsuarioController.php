@@ -6,6 +6,9 @@ use App\Models\Usuario;
 use App\Helpers\JwtHelper;
 use App\Middlewares\AutenticadorMiddleware;
 
+require_once SRC_PATH . 'sanitizers/UsuarioSanitizer.php';
+require_once SRC_PATH . 'validators/UsuarioValidator.php';
+
 class UsuarioController
 {
     /**
@@ -16,12 +19,11 @@ class UsuarioController
     {
         $user = AutenticadorMiddleware::verificar();
 
-        if ($user->rol != 3) {
+        if ($user->rol_id != 3) {
             renderJson([
                 'success' => false,
                 'error' => 'Solo administradores'
             ], 403);
-            return;
         }
 
         try {
@@ -48,23 +50,29 @@ class UsuarioController
     {
         $user = AutenticadorMiddleware::verificar();
 
-        if ($user->rol != 3 && $user->sub != $id) {
+        // Sanitizar y validar ID
+        $idSan = sanitizarIdUsuario($id);
+        $validacionId = validarSoloIdUsuario($idSan);
+
+        if (!$validacionId['success']) {
+            renderJson($validacionId, 400);
+        }
+
+        if ($user->rol_id != 3 && $user->sub != $idSan) {
             renderJson([
                 'success' => false,
                 'error' => 'No autorizado'
             ], 403);
-            return;
         }
 
         try {
-            $usuario = Usuario::obtenerPorId($id);
+            $usuario = Usuario::obtenerPorId($idSan);
 
             if (!$usuario) {
                 renderJson([
                     'success' => false,
                     'error' => 'Usuario no encontrado'
                 ], 404);
-                return;
             }
 
             renderJson([
@@ -81,20 +89,38 @@ class UsuarioController
     }
 
     /**
-     * POST /api/usuarios (registro público o admin)
+     * POST /api/usuarios
      */
     public function guardar()
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $raw = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        if (!$data) {
-            renderJson(['success' => false, 'error' => 'Datos inválidos'], 400);
-            return;
+        if (!$raw) {
+            renderJson([
+                'success' => false,
+                'error' => 'Datos inválidos'
+            ], 400);
         }
 
+        // 1. Sanitizar
+        $data = sanitizarUsuario($raw);
+
+        // 2. Validar
+        $validacion = validarCrearUsuario($data);
+
+        if (!$validacion['success']) {
+            renderJson([
+                'success' => false,
+                'errors' => $validacion['errors']
+            ], 400);
+        }
+
+        // 3. Regla de negocio
         if (Usuario::existePorEmail($data['email'])) {
-            renderJson(['success' => false, 'error' => 'Email ya registrado'], 409);
-            return;
+            renderJson([
+                'success' => false,
+                'error' => 'Email ya registrado'
+            ], 409);
         }
 
         try {
@@ -120,25 +146,36 @@ class UsuarioController
     }
 
     /**
-     * LOGIN JWT
+     * LOGIN
      */
     public function login()
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $raw = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        if (!$data || !isset($data['email'], $data['contrasena'])) {
-            renderJson(['success' => false, 'error' => 'Datos incompletos'], 400);
-            return;
+        if (!isset($raw['email'], $raw['contrasena'])) {
+            renderJson([
+                'success' => false,
+                'error' => 'Datos incompletos'
+            ], 400);
         }
 
-        $usuario = Usuario::verificarCredenciales(
-            sanitizarSoloEmail($data['email']),
-            $data['contrasena']
-        );
+        // Sanitizar email
+        $email = sanitizarSoloEmail($raw['email']);
+
+        // Validar email
+        $validacion = validarEmailLoginUsuario($email);
+
+        if (!$validacion['success']) {
+            renderJson($validacion, 400);
+        }
+
+        $usuario = Usuario::verificarCredenciales($email, $raw['contrasena']);
 
         if (!$usuario) {
-            renderJson(['success' => false, 'error' => 'Credenciales inválidas'], 401);
-            return;
+            renderJson([
+                'success' => false,
+                'error' => 'Credenciales inválidas'
+            ], 401);
         }
 
         $token = JwtHelper::generarToken($usuario);
@@ -167,24 +204,38 @@ class UsuarioController
     }
 
     /**
-     * DELETE usuario
+     * DELETE
      */
     public function eliminar($id)
     {
         $user = AutenticadorMiddleware::verificar();
 
-        if ($user->rol != 3) {
-            renderJson(['success' => false, 'error' => 'Solo admin'], 403);
-            return;
+        if ($user->rol_id != 3) {
+            renderJson([
+                'success' => false,
+                'error' => 'Solo admin'
+            ], 403);
+        }
+
+        // Sanitizar y validar ID
+        $idSan = sanitizarIdUsuario($id);
+        $validacion = validarSoloIdUsuario($idSan);
+
+        if (!$validacion['success']) {
+            renderJson($validacion, 400);
         }
 
         try {
-            if (!Usuario::existe($id)) {
-                renderJson(['success' => false, 'error' => 'No existe'], 404);
-                return;
+            $usuario = Usuario::find($idSan);
+
+            if (!$usuario) {
+                renderJson([
+                    'success' => false,
+                    'error' => 'Usuario no encontrado'
+                ], 404);
             }
 
-            Usuario::destroy($id);
+            $usuario->delete();
 
             renderJson([
                 'success' => true,
@@ -192,7 +243,10 @@ class UsuarioController
             ], 200);
 
         } catch (\Exception $e) {
-            renderJson(['success' => false, 'error' => $e->getMessage()], 500);
+            renderJson([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }
