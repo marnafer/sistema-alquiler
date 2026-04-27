@@ -3,65 +3,37 @@
 require_once SRC_PATH . 'controllers/PropiedadController.php';
 
 use App\Controllers\PropiedadController;
+use App\Middlewares\AutenticadorMiddleware;
 
 $controller = new PropiedadController();
 
-/**
- * =========================================
- * VISTA: FORMULARIO (HTML)
- * =========================================
- * GET /api/propiedades/nuevo
- */
-    if ($path === '/api/propiedades/nuevo') {
+switch (true) {
 
-        if ($method === 'GET') {
-            $controller->mostrarFormulario();
-        } else {
-            renderJson([
-                'status' => 'error',
-                'message' => "Método $method no permitido"
-            ], 405);
-        }
+    case $path === '/api/propiedades' && $method === 'GET':
+        $controller->indexApi();
+        break;
 
-        exit;
-    }
+    case $path === '/api/propiedades' && $method === 'POST':
+        $controller->crear();
+        break;
 
-/**
- * =========================================
- * API: PROPIEDADES
- * =========================================
- * GET    /api/propiedades     -> listar
- * POST   /api/propiedades     -> crear
- */
-    if (trim($path) === '/api/propiedades') {
+    case preg_match('#^/api/propiedades/(\d+)$#', $path, $matches) && $method === 'GET':
+        $controller->mostrarApi($matches[1]);
+        break;
 
-        switch ($method) {
+    case preg_match('#^/api/propiedades/(\d+)$#', $path, $matches) && $method === 'PUT':
+        $controller->actualizar($matches[1]);
+        break;
 
-            case 'GET':
-                $controller->indexApi();
-                break;
+    case preg_match('#^/api/propiedades/(\d+)$#', $path, $matches) && $method === 'DELETE':
+        $controller->eliminar($matches[1]);
+        break;
 
-            case 'POST':
-                $controller->crear();
-                break;
+    case $path === '/api/propiedades/nuevo' && $method === 'GET':
+        $controller->mostrarFormulario();
+        break;
 
-            default:
-                renderJson([
-                    'status' => 'error',
-                    'message' => "Método $method no permitido"
-                ], 405);
-                break;
-        }
-
-        exit;
-    }
-
-/**
- * =========================================
- * RUTA NO ENCONTRADA
- * =========================================
- */
-    renderJson([
-        'status' => 'error',
-        'message' => 'Ruta no encontrada'
-    ], 404);
+    default:
+        http_response_code(404);
+        renderJson(['error' => 'Ruta no encontrada'], 404);
+}

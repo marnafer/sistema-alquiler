@@ -51,4 +51,16 @@ class AutenticadorMiddleware {
 
         return $user;
     }
+
+    public static function soloAdmin() {
+        $user = self::verificar();
+
+        if ($user->rol != 3) {
+            http_response_code(403);
+            renderJson(['error' => 'Solo administradores'], 403);
+            exit;
+        }
+
+        return $user;
+    }
 }
