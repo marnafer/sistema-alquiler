@@ -1,44 +1,78 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Models\Usuario;
+use App\Helpers\JwtHelper;
 
 class AutenticadorController {
-    
-    // Muestra el formulario de Login
-    public function loginVista() {
-        require_once SRC_PATH . 'views/autenticador_views/login.php';
-    }
 
-    // Procesa el formulario
+    // LOGIN
     public function login() {
-        $email = $_POST['email'] ?? '';
-        $password = $_POST['contrasena'] ?? '';
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        $email = $data['email'] ?? null;
+        $password = $data['password'] ?? null;
+
+        if (!$email || !$password) {
+            renderJson([
+                'success' => false,
+                'error' => 'Datos incompletos'
+            ], 400);
+        }
 
         $usuario = Usuario::where('email', $email)->first();
 
-        if ($usuario && password_verify($password, $usuario->contrasena)) {
-            // Si es correcto, iniciamos sesión
-            if (session_status() === PHP_SESSION_NONE) session_start();
-            
-            $_SESSION['user_id']   = $usuario->id;
-            $_SESSION['user_rol']  = $usuario->rol_id;
-            $_SESSION['user_nome'] = $usuario->nombre;
-
-            header('Location: /sistema-alquiler/propiedades');
-            exit;
-        } else {
-            // Si falla, volvemos con error
-            header('Location: /sistema-alquiler/login?error=auth');
-            exit;
+        if (!$usuario || !password_verify($password, $usuario->contrasena)) {
+            renderJson([
+                'success' => false,
+                'error' => 'Credenciales inválidas'
+            ], 401);
         }
+
+        $token = JwtHelper::generarToken($usuario);
+
+        renderJson([
+            'success' => true,
+            'token' => $token
+        ]);
     }
 
-    // Cierra la sesión
+    // REGISTER
+    public function register() {
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        if (!$data['email'] || !$data['password']) {
+            renderJson([
+                'success' => false,
+                'error' => 'Datos incompletos'
+            ], 400);
+        }
+
+        if (Usuario::where('email', $data['email'])->exists()) {
+            renderJson([
+                'success' => false,
+                'error' => 'El usuario ya existe'
+            ], 400);
+        }
+
+        $usuario = new Usuario();
+        $usuario->email = $data['email'];
+        $usuario->contrasena = password_hash($data['password'], PASSWORD_BCRYPT);
+        $usuario->rol_id = 1;
+        $usuario->save();
+
+        renderJson([
+            'success' => true,
+            'message' => 'Usuario registrado'
+        ], 201);
+    }
+
+    // LOGOUT
     public function logout() {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        session_destroy();
-        header('Location: /sistema-alquiler/login');
-        exit;
+        renderJson([
+            'success' => true,
+            'message' => 'Logout (el cliente elimina el token)'
+        ], 200);
     }
 }

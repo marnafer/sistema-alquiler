@@ -78,10 +78,10 @@ class Usuario extends Model
     public function obtenerPorEmail($email)
     {
         $row = self::where('email', $email)
-            ->whereNull('deleted_at')
-            ->first();
+        ->whereNull('deleted_at')
+        ->first();
 
-        return $row ? $row->toArray() : null;
+        return $row; // devolver modelo, no array
     }
 
     /**

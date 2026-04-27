@@ -107,7 +107,8 @@ if ($path === '/') {
             '/api/logs-actividad',
             '/api/roles',
             '/api/propiedad-imagenes',
-            '/api/debug/stats'
+            '/api/debug/stats',
+            '/api/login'
         ]
     ]);
 }
@@ -224,6 +225,11 @@ elseif (strpos($path, '/debug') !== false) {
     } else {
         renderError("Archivo de rutas no encontrado: debug_router.php", 500, $path);
     }
+}
+// 16. Módulo Login
+elseif (strpos($path, '/api/autenticador') === 0) {
+    require_once SRC_PATH . 'routes/autenticador_router.php';
+    exit;
 }
 // ============================================
 // RUTA NO ENCONTRADA (404)
