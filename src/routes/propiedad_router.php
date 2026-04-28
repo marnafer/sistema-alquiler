@@ -1,8 +1,7 @@
 <?php
 
-require_once SRC_PATH . 'controllers/PropiedadController.php';
-
-use App\Controllers\PropiedadController;
+use App\controllers\PropiedadController;
+use App\middlewares\AutenticadorMiddleware;
 
 $controller = new PropiedadController();
 
