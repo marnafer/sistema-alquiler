@@ -3,6 +3,7 @@
 require_once SRC_PATH . 'controllers/UsuarioController.php';
 
 use App\Controllers\UsuarioController;
+use App\Middlewares\AutenticadorMiddleware;
 
 $controller = new UsuarioController();
 

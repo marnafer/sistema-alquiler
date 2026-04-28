@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\Usuario;
 use App\Helpers\JwtHelper;
+use App\Sanitizers\UsuarioSanitizer;
+use Ao
 
 class AutenticadorController {
 
