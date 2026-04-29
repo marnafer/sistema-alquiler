@@ -155,7 +155,7 @@ class UsuarioValidator
     }
 
     public static function validarActualizarUsuario($data, $requerirContrasena = false) {
-        return self::validarUsuario($data, true, $requerirContrasena);
+        return self::validarUsuario($data, false, $requerirContrasena);
     }
 
     public static function validarSoloIdUsuario($id) {

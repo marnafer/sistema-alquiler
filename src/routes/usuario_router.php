@@ -19,7 +19,7 @@ switch (true) {
                 break;
 
             case 'POST':
-                $controller->guardar();
+                $controller->registrar();
                 break;
 
             default:

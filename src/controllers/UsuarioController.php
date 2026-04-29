@@ -90,7 +90,7 @@ class UsuarioController
     /**
      * POST /api/usuarios
      */
-    public function guardar()
+    public function registrar()
     {
         $raw = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -102,10 +102,10 @@ class UsuarioController
         }
 
         // 1. Sanitizar
-        $data = sanitizarUsuario($raw);
+        $data = UsuarioSanitizer::sanitizarUsuario($raw);
 
         // 2. Validar
-        $validacion = validarCrearUsuario($data);
+        $validacion = UsuarioValidator::validarCrearUsuario($data);
 
         if (!$validacion['success']) {
             renderJson([
@@ -114,8 +114,10 @@ class UsuarioController
             ], 400);
         }
 
-        // 3. Regla de negocio
-        if (Usuario::existePorEmail($data['email'])) {
+       // 3. Regla de negocio
+        $usuarioModel = new Usuario();
+
+        if ($usuarioModel->existePorEmail($data['email'])) {
             renderJson([
                 'success' => false,
                 'error' => 'Email ya registrado'
@@ -260,4 +262,83 @@ class UsuarioController
             ], 500);
         }
     }
-}
+
+    /**
+    * PUT /api/usuarios/{id}  // Editar usuario, solo admin o el mismo usuario
+    */
+
+    public function actualizar($id)
+    {
+        $user = AutenticadorMiddleware::verificar(); 
+
+        // Sanitizar y validar ID
+        $idSan = UsuarioSanitizer::sanitizarIdUsuario($id);
+        $validacionId = UsuarioValidator::validarSoloIdUsuario($idSan);
+
+        if (!$validacionId['success']) {
+            renderJson($validacionId, 400);
+        }
+        if ($user->rol_id != 3 && $user->sub != $idSan) {
+            renderJson([
+                'success' => false,
+                'error' => 'No autorizado'
+            ], 403);
+        }
+        $raw = json_decode(file_get_contents('php://input'), true) ?? []; 
+        if (!is_array($raw)) {
+            renderJson([
+                'success' => false,
+                'error' => 'Datos inválidos'
+            ], 400);
+        }
+
+        // Sanitizar datos
+        $data = UsuarioSanitizer::sanitizarUsuario($raw);
+
+        // Validar datos
+        $validacion = UsuarioValidator::validarActualizarUsuario($data);
+
+        if (!$validacion['success']) {
+            renderJson([
+                'success' => false,
+                'errors' => $validacion['errors']
+            ], 400);
+        }
+        try {
+            $usuario = Usuario::find($idSan);
+            if (!$usuario || $usuario->deleted_at !== null) {
+                renderJson([
+                    'success' => false,
+                    'error' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Si se actualiza la contraseña, hashearla
+            if (!empty($data['contrasena'])) {
+                $data['contrasena'] = password_hash($data['contrasena'], PASSWORD_DEFAULT);
+            }
+            // Verificar si el nuevo email ya está registrado por otro usuario
+            $usuarioModel = new Usuario();
+
+            if (isset($data['email']) && $usuarioModel->existePorEmail($data['email'], $idSan)) {
+                renderJson([
+                    'success' => false,
+                    'error' => 'Email ya registrado por otro usuario'
+                ], 409);
+            }
+
+            $usuario->update($data);
+
+            renderJson([
+                'success' => true,
+                'message' => 'Usuario actualizado exitosamente'
+            ], 200);
+
+        } catch (\Exception $e) {
+            renderJson([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+}   
