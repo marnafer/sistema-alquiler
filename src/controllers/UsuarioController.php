@@ -5,9 +5,8 @@ namespace App\Controllers;
 use App\Models\Usuario;
 use App\Helpers\JwtHelper;
 use App\Middlewares\AutenticadorMiddleware;
-
-require_once SRC_PATH . 'sanitizers/UsuarioSanitizer.php';
-require_once SRC_PATH . 'validators/UsuarioValidator.php';
+use App\Sanitizers\UsuarioSanitizer;
+use App\Validators\UsuarioValidator;
 
 class UsuarioController
 {
@@ -148,28 +147,40 @@ class UsuarioController
     /**
      * LOGIN
      */
-    public function login()
+    public static function login()
     {
         $raw = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        if (!isset($raw['email'], $raw['contrasena'])) {
+        $email = $raw['email'] ?? null;
+        $contrasena = $raw['contrasena'] ?? null;
+
+        if (!$email || !$contrasena) {
             renderJson([
                 'success' => false,
                 'error' => 'Datos incompletos'
             ], 400);
+            exit;
         }
 
         // Sanitizar email
-        $email = sanitizarSoloEmail($raw['email']);
+        $email = UsuarioSanitizer::sanitizarSoloEmail($email); 
 
         // Validar email
-        $validacion = validarEmailLoginUsuario($email);
+        $validacion = UsuarioValidator::validarEmailLoginUsuario($email); 
 
         if (!$validacion['success']) {
             renderJson($validacion, 400);
         }
 
-        $usuario = Usuario::verificarCredenciales($email, $raw['contrasena']);
+        $validacionPass = UsuarioValidator::validarContrasenaUsuario($contrasena); // Validar contraseña (aunque no se sanitice, se valida su formato)
+
+        if (!$validacionPass['success']) {
+            renderJson($validacionPass, 400);
+        }
+
+        $usuarioModel = new Usuario();
+
+        $usuario = $usuarioModel->verificarCredenciales($email, $contrasena); // Se instancia el modelo para usar el método de verificación de credenciales
 
         if (!$usuario) {
             renderJson([
