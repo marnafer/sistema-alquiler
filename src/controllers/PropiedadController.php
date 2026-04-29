@@ -98,6 +98,9 @@ class PropiedadController {
         $inputData = json_decode($inputRaw, true) ?? $_POST;
 
         $datosLimpios = PropiedadSanitizer::sanitizarPropiedad($inputData);
+
+        unset($datosLimpios['id']); // no permitir ID en creación (autoincremental)
+
         $errores = PropiedadValidator::validarPropiedad($datosLimpios);
 
         if (!empty($errores)) {

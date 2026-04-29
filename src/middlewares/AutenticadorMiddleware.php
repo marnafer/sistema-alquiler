@@ -6,11 +6,13 @@ use App\Helpers\JwtHelper;
 
 class AutenticadorMiddleware {
 
-    public static function verificar() {
+   public static function verificar() {
+
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] 
             ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
             ?? null;
 
+        // 1. Verificar que exista
         if (!$authHeader) {
             renderJson([
                 'success' => false,
@@ -18,25 +20,34 @@ class AutenticadorMiddleware {
             ], 401);
         }
 
-        $token = str_replace('Bearer ', '', $authHeader);
-
-        try {
-            $user = JwtHelper::validarToken($token);
-            return $user;
-
-        } catch (\Exception $e) {
+        // 2. Verificar formato Bearer
+        if (!str_starts_with($authHeader, 'Bearer ')) {
             renderJson([
                 'success' => false,
-                'error' => 'Token inválido'
-                // opcional: $e->getMessage()
+                'error' => 'Formato de token inválido'
             ], 401);
         }
+
+        // 3. Extraer token
+        $token = substr($authHeader, 7);
+
+        // 4. Validar token
+        $user = JwtHelper::verificarToken($token);
+
+        if (!$user) {
+            renderJson([
+                'success' => false,
+                'error' => 'Token inválido o expirado'
+            ], 401);
+        }
+
+        return $user;
     }
 
     public static function soloPropietario() {
         $user = self::verificar();
 
-        if ($user->rol_id != 2) {
+        if ($user->rol_id != 1) {
             renderJson([
                 'success' => false,
                 'error' => 'Solo propietarios'
@@ -49,7 +60,7 @@ class AutenticadorMiddleware {
     public static function soloInquilino() {
         $user = self::verificar();
 
-        if ($user->rol_id != 1) {
+        if ($user->rol_id != 2) {
             renderJson([
                 'success' => false,
                 'error' => 'Solo inquilinos'

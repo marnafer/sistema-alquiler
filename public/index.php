@@ -5,6 +5,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/database.php';
 
+$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+$dotenv->load();
+
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 error_reporting(E_ALL);
 

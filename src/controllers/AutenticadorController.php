@@ -5,7 +5,7 @@ namespace App\Controllers;
 use App\Models\Usuario;
 use App\Helpers\JwtHelper;
 use App\Sanitizers\UsuarioSanitizer;
-use Ao
+use App\Validators\UsuarioValidator;
 
 class AutenticadorController {
 
@@ -25,10 +25,10 @@ class AutenticadorController {
         }
 
         // 2. Sanitizar email
-        $email = sanitizarSoloEmail($email);
+        $email = UsuarioSanitizer::sanitizarSoloEmail($data['email'] ?? null);
 
         // 3. Validar formato de email
-        $validacionEmail = validarEmailLoginUsuario($email);
+        $validacionEmail = UsuarioValidator::validarEmailLoginUsuario($email);
 
         if (!$validacionEmail['success']) {
             renderJson($validacionEmail, 400);
@@ -56,28 +56,35 @@ class AutenticadorController {
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
         // 1. Sanitizar
-        $san = sanitizarUsuario($data);
+        $san = UsuarioSanitizer::sanitizarUsuario($data);
 
-        // 2. Validar datos
-        $val = validarCrearUsuario($san);
+        // 2. Validar
+        $val = UsuarioValidator::validarCrearUsuario($san);
 
         if (!$val['success']) {
             renderJson($val, 400);
         }
 
-        // 3. Validación de negocio (DB)
+        // 3. Validación de negocio (email único)
         if (Usuario::where('email', $san['email'])->exists()) {
             renderJson([
                 'success' => false,
                 'error' => 'El usuario ya existe'
-            ], 409); 
+            ], 409);
         }
 
-        $san['contrasena'] = password_hash($san['contrasena'], PASSWORD_BCRYPT);
-        $san['rol_id'] = $san['rol_id'] ?? 1;
+        // 4. Crear usuario
+        Usuario::create([
+        'nombre' => $san['nombre'],
+        'apellido' => $san['apellido'],
+        'email' => $san['email'],
+        'telefono' => $san['telefono'],
+        'domicilio' => $san['domicilio'],
+        'contrasena' => password_hash($san['contrasena'], PASSWORD_BCRYPT),
+        'rol_id' => $san['rol_id'] ?? 1
+    ]);
 
-        $usuario = Usuario::create($san);
-
+        // 5. Respuesta
         renderJson([
             'success' => true,
             'message' => 'Usuario registrado'
