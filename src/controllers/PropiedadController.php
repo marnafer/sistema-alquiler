@@ -200,7 +200,7 @@ class PropiedadController {
         try {
             $propiedad = Propiedad::find($id);
 
-            if (!$propiedad) {
+            if (!$propiedad || $propiedad->deleted_at !== null) { // Checkear soft delete si ya fue eliminada
                 return renderJson([
                     'status' => 'error',
                     'message' => 'Propiedad no encontrada'
@@ -219,7 +219,7 @@ class PropiedadController {
 
             return renderJson([
                 'status' => 'success',
-                'message' => "Propiedad #$id eliminada"
+                'message' => "Propiedad #$id eliminada correctamente"
             ], 200);
 
         } catch (\Exception $e) {
@@ -230,4 +230,43 @@ class PropiedadController {
             ], 500);
         }
     }
+
+    /**
+     * API: restaurar propiedad (SOLO PROPIETARIO + dueño)
+     */
+     public function restaurar($id) {
+        $user = AutenticadorMiddleware::soloPropietario();
+        try {
+            $propiedad = Propiedad::withTrashed()->find($id);
+            if (!$propiedad) {
+                return renderJson([
+                    'status' => 'error',
+                    'message' => 'Propiedad no encontrada'
+                ], 404);
+            }
+            // control de dueño
+            if ($propiedad->usuario_id != $user->sub) {
+                return renderJson([
+                    'status' => 'error',
+                    'message' => 'No tienes permiso para restaurar esta propiedad'
+                ], 403);
+            }
+            if ($propiedad->deleted_at === null) {
+                return renderJson([
+                    'status' => 'error',
+                    'message' => 'La propiedad no está eliminada'
+                ], 400);
+            }
+            $propiedad->restore();
+            return renderJson([
+                'status' => 'success',
+                'message' => "Propiedad #$id restaurada correctamente"
+            ], 200);
+        } catch (\Exception $e) {
+            return renderJson([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+     }    
 }

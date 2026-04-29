@@ -42,7 +42,9 @@ switch (true) {
             case 'DELETE':
                 $controller->eliminar($matches[1]);
                 break;
-
+            case 'PATCH':
+                $controller->restaurar($matches[1]);
+                break;
             default:
                 http_response_code(405);
                 renderJson([
