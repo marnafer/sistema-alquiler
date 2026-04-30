@@ -6,14 +6,10 @@
 
 namespace App\Controllers;
 
-require_once SRC_PATH . 'sanitizers/ConsultaSanitizer.php';
-require_once SRC_PATH . 'validators/ConsultaValidator.php';
-require_once SRC_PATH . 'middlewares/AutenticadorMiddleware.php';
-
 use App\Models\Consulta;
 use App\Models\Propiedad;
 use App\Models\Usuario;
-use App\Controllers\ConsultaSanitizer;
+use App\Sanitizers\ConsultaSanitizer;
 use App\Validators\ConsultaValidator;
 use App\Middlewares\AutenticadorMiddleware;
 use SoftDeletes;
@@ -52,10 +48,25 @@ class ConsultaController {
         $user = AutenticadorMiddleware::verificar();
 
         try {
-            $consulta = Consulta::find($id);
+            // 1. Sanitizar + validar ID
+            $idSan = ConsultaSanitizer::sanitizarId($id);
+            $validacion = ConsultaValidator::validarConsultaId($idSan);
+
+            if (!$validacion['success']) {
+                return renderJson([
+                    'success' => false,
+                    'error' => $validacion['error']
+                ], 400);
+            }
+
+            // 2. Buscar
+            $consulta = Consulta::find($idSan);
 
             if (!$consulta) {
-                return renderJson(['error' => 'No encontrada'], 404);
+                return renderJson([
+                    'success' => false,
+                    'error' => 'Consulta no encontrada'
+                ], 404);
             }
 
             // REGLA DE ACCESO
@@ -90,7 +101,7 @@ class ConsultaController {
             }
 
             // propietario dueño o admin
-            if ($user->rol != 3 && $propiedad->usuario_id != $user->sub) {
+            if ($user->rol_id != 3 && $propiedad->usuario_id != $user->sub) {
                 return renderJson(['error' => 'No autorizado'], 403);
             }
 
@@ -117,7 +128,7 @@ class ConsultaController {
 
         try {
 
-            if ($user->rol != 3 && $user->sub != $inquilinoId) {
+            if ($user->rol_id != 3 && $user->sub != $inquilinoId) {
                 return renderJson(['error' => 'No autorizado'], 403);
             }
 
@@ -142,19 +153,31 @@ class ConsultaController {
 
         $user = AutenticadorMiddleware::soloInquilino();
 
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $raw = json_decode(file_get_contents('php://input'), true);
 
-        if (!$data) {
-            return renderJson(['error' => 'Datos inválidos'], 400);
+        // Validar JSON primero
+        if (!is_array($raw)) {
+            return renderJson([
+                'success' => false,
+                'error' => 'JSON inválido'
+            ], 400);
         }
 
-        $resultadoValidacion = validarConsulta($data);
+        // 1. SANITIZAR
+        $san = ConsultaSanitizer::sanitizarConsulta($raw);
 
-        if (!$resultadoValidacion['success']) {
-            return renderJson($resultadoValidacion, 400);
+        // 2. VALIDAR
+        $validacion = ConsultaValidator::validarCrearConsulta($san);
+
+        if (!$validacion['success']) {
+            return renderJson([
+                'success' => false,
+                'errors' => $validacion['errors']
+            ], 400);
         }
 
-        $dataValida = $resultadoValidacion['data'];
+        // 3. DATOS LIMPIOS
+        $dataValida = $validacion['data'];
 
         try {
 
@@ -201,9 +224,26 @@ public function actualizar($id) {
             return renderJson(['error' => 'No autorizado'], 403);
         }
 
-        $data = json_decode(file_get_contents('php://input'), true);
+       $raw = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        $consulta->update($data);
+        // 1. AGREGAR ID
+        $raw['id'] = $id;
+
+        // 2. SANITIZAR
+        $san = ConsultaSanitizer::sanitizarConsulta($raw);
+
+        // 3. VALIDAR
+        $validacion = ConsultaValidator::validarActualizarConsulta($san);
+
+        if (!$validacion['success']) {
+            return renderJson([
+                'success' => false,
+                'errors' => $validacion['errors']
+            ], 400);
+        }
+
+        // 4. ACTUALIZAR
+        $consulta->update($validacion['data']);
 
         renderJson([
             'success' => true,
@@ -222,8 +262,11 @@ public function eliminar($id) {
 
         $consulta = Consulta::find($id);
 
-        if (!$consulta) {
-            return renderJson(['error' => 'No existe'], 404);
+        $idSan = ConsultaSanitizer::sanitizarId($id);
+        $validacion = ConsultaValidator::validarConsultaId($idSan);
+
+        if (!$validacion['success']) {
+            return renderJson($validacion, 400);
         }
 
         $consulta->delete();
