@@ -140,8 +140,14 @@ elseif (strpos($path, '/api/usuarios') === 0) {
     exit;
 }
 
-// --- LOGS ---
-elseif (strpos($path, '/api/logs') === 0 || strpos($path, '/api/logs-actividad') === 0) {
+// --- LOGS ACTIVIDAD (más específico primero) ---
+elseif (strpos($path, '/api/logs-actividad') === 0) {
+    require_once SRC_PATH . 'routes/log_router.php';
+    exit;
+}
+
+// --- LOGS (más general después) ---
+elseif (strpos($path, '/api/logs') === 0) {
     require_once SRC_PATH . 'routes/log_router.php';
     exit;
 }
@@ -175,61 +181,42 @@ elseif (strpos($path, '/api/servicios') === 0) {
     require_once SRC_PATH . 'routes/servicio_router.php';
     exit;
 }
-// 10. Módulo Propiedad Servicio 
-elseif (strpos($path, '/api/propiedades-servicios') !== false) {
-    $routerPath = SRC_PATH . 'routes/propiedadservicio_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: propiedadservicio_router.php", 500, $path);
-    }
+// --- PROPIEDADES-SERVICIOS ---
+elseif (strpos($path, '/api/propiedades-servicios') === 0) {
+    require_once SRC_PATH . 'routes/propiedadservicio_router.php';
+    exit;
 }
-// 11. Módulo Reservas
-elseif (strpos($path, '/api/reservas') !== false) {
-    $routerPath = SRC_PATH . 'routes/reserva_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: reserva_router.php", 500, $path);
-    }
+
+// --- RESERVAS ---
+elseif (strpos($path, '/api/reservas') === 0) {
+    require_once SRC_PATH . 'routes/reserva_router.php';
+    exit;
 }
-// 12. Módulo Reseñas
-elseif (strpos($path, '/api/resenas') !== false) {
-    $routerPath = SRC_PATH . 'routes/resena_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: resena_router.php", 500, $path);
-    }
+
+// --- RESEÑAS ---
+elseif (strpos($path, '/api/resenas') === 0) {
+    require_once SRC_PATH . 'routes/resena_router.php';
+    exit;
 }
-// 13. Módulo Consultas
-elseif (strpos($path, '/api/consultas') !== false) {
-    $routerPath = SRC_PATH . 'routes/consulta_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: consulta_router.php", 500, $path);
-    }
+
+// --- CONSULTAS ---
+elseif (strpos($path, '/api/consultas') === 0) {
+    require_once SRC_PATH . 'routes/consulta_router.php';
+    exit;
 }
-// 14. Módulo Roles
-elseif (strpos($path, '/api/roles') !== false) {
-    $routerPath = SRC_PATH . 'routes/rol_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: rol_router.php", 500, $path);
-    }
+
+// --- ROLES ---
+elseif (strpos($path, '/api/roles') === 0) {
+    require_once SRC_PATH . 'routes/rol_router.php';
+    exit;
 }
-// 15. Módulo Debug
-elseif (strpos($path, '/debug') !== false) {
-    $routerPath = SRC_PATH . 'routes/debug_router.php';
-    if (file_exists($routerPath)) {
-        require_once $routerPath;
-    } else {
-        renderError("Archivo de rutas no encontrado: debug_router.php", 500, $path);
-    }
+
+// --- DEBUG ---
+elseif (strpos($path, '/debug') === 0) {
+    require_once SRC_PATH . 'routes/debug_router.php';
+    exit;
 }
-// 16. Módulo Login
+// --- LOGIN ---
 elseif (strpos($path, '/api/autenticador') === 0) {
     require_once SRC_PATH . 'routes/autenticador_router.php';
     exit;

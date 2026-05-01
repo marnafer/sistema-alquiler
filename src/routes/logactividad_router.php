@@ -1,6 +1,7 @@
 <?php
 
-require_once SRC_PATH . 'controllers/LogActividadController.php';
+var_dump(function_exists('renderJson'));
+exit;
 
 use App\Controllers\LogActividadController;
 
