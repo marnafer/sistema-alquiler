@@ -1,8 +1,5 @@
 <?php
 
-var_dump(function_exists('renderJson'));
-exit;
-
 use App\Controllers\LogActividadController;
 
 $controller = new LogActividadController();

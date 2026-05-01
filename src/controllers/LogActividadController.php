@@ -15,7 +15,7 @@ class LogActividadController
     public function index()
     {
         try {
-            $logs = LogActividad::all();
+            $logs = LogActividad::getAll();
 
             return renderJson([
                 'success' => true,
@@ -100,7 +100,7 @@ class LogActividadController
         }
 
         try {
-            $logs = LogActividad::whereBetween('created_at', [
+            $logs = LogActividad::whereBetween('fecha', [
                 $desde,
                 $hasta . ' 23:59:59'
             ])->get();
@@ -232,7 +232,9 @@ class LogActividadController
         }
 
         try {
-            $eliminados = LogActividad::where('created_at', '<', now()->subDays($dias))->delete();
+            $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
+
+            $eliminados = LogActividad::where('fecha', '<', $fechaLimite)->delete();
 
             return renderJson([
                 'success' => true,

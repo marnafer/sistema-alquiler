@@ -142,13 +142,13 @@ elseif (strpos($path, '/api/usuarios') === 0) {
 
 // --- LOGS ACTIVIDAD (más específico primero) ---
 elseif (strpos($path, '/api/logs-actividad') === 0) {
-    require_once SRC_PATH . 'routes/log_router.php';
+    require_once SRC_PATH . 'routes/logactividad_router.php';
     exit;
 }
 
 // --- LOGS (más general después) ---
 elseif (strpos($path, '/api/logs') === 0) {
-    require_once SRC_PATH . 'routes/log_router.php';
+    require_once SRC_PATH . 'routes/logactividad_router.php';
     exit;
 }
 
