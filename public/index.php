@@ -116,12 +116,6 @@ if ($path === '/') {
     ]);
 }
 
-// --- PROPIEDADES ---
-elseif (strpos($path, '/api/propiedades') === 0) {
-    require_once SRC_PATH . 'routes/propiedad_router.php';
-    exit;
-}
-
 // --- FAVORITOS (por usuario) ---
 elseif (preg_match('#^/api/usuarios/\d+/favoritos$#', $path)) {
     require_once SRC_PATH . 'routes/favorito_router.php';
@@ -176,14 +170,15 @@ elseif (strpos($path, '/api/provincias') === 0) {
     exit;
 }
 
-// --- SERVICIOS ---
-elseif (strpos($path, '/api/servicios') === 0) {
-    require_once SRC_PATH . 'routes/servicio_router.php';
-    exit;
-}
 // --- PROPIEDADES-SERVICIOS ---
 elseif (strpos($path, '/api/propiedades-servicios') === 0) {
     require_once SRC_PATH . 'routes/propiedadservicio_router.php';
+    exit;
+}
+
+// --- SERVICIOS ---
+elseif (strpos($path, '/api/servicios') === 0) {
+    require_once SRC_PATH . 'routes/servicio_router.php';
     exit;
 }
 
@@ -208,6 +203,12 @@ elseif (strpos($path, '/api/consultas') === 0) {
 // --- ROLES ---
 elseif (strpos($path, '/api/roles') === 0) {
     require_once SRC_PATH . 'routes/rol_router.php';
+    exit;
+}
+
+// --- PROPIEDADES ---
+elseif (strpos($path, '/api/propiedades') === 0) {
+    require_once SRC_PATH . 'routes/propiedad_router.php';
     exit;
 }
 
