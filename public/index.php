@@ -13,6 +13,8 @@ error_reporting(E_ALL);
 
 define('SRC_PATH', dirname(__DIR__) . '/src/');
 
+define('BASE_URL', rtrim(dirname($_SERVER['SCRIPT_NAME']), '/')); // Esto es útil para generar URLs relativas a la raíz del proyecto, 
+                                                                  // especialmente si no está en la raíz del servidor web.  
 ini_set('display_errors', 1);
 
 // --- CONFIGURACIÓN ---
@@ -36,16 +38,16 @@ if (strpos($path_bruto, '/public') === 0) {
 $path = '/' . trim((string)$path_bruto, "/");
 
 // --- DEBUG ---
-require_once dirname(__DIR__) . '/src/debug/Debugger.php';
+//require_once dirname(__DIR__) . '/src/debug/Debugger.php';
 
-use App\Debug\Debugger;
+//use App\Debug\Debugger;
 
-if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
-    Debugger::setEnabled(true);
-    Debugger::enableErrorReporting();
-}
+//if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
+//    Debugger::setEnabled(true);
+//    Debugger::enableErrorReporting();
+//}
 
-Debugger::request();
+// Debugger::request();
 
 // ============================================
 // DETECCIÓN DE RUTAS
@@ -217,18 +219,29 @@ elseif (strpos($path, '/debug') === 0) {
     require_once SRC_PATH . 'routes/debug_router.php';
     exit;
 }
+
 // --- LOGIN ---
 elseif (strpos($path, '/api/autenticador') === 0) {
     require_once SRC_PATH . 'routes/autenticador_router.php';
     exit;
 }
+
+// --- PAGINAS --
+    if (strpos($path, '/api/') !== 0) {
+    header('Content-Type: text/html; charset=utf-8');
+    }
+    require SRC_PATH . 'routes/pagina_router.php'; 
+    exit;
+
 // ============================================
 // RUTA NO ENCONTRADA (404)
 // ============================================
-else {
-    renderError("Ruta no encontrada", 404);
-    exit;
-}
+
+renderJson([
+    'success' => false,
+    'error' => 'Ruta no encontrada'
+], 404);
+exit;
 
 // --- HELPERS ---
 

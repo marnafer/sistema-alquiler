@@ -28,7 +28,7 @@ class ProvinciaValidator {
             }
         }
 
-        // ❌ errores
+        // errores
         if (!empty($errores)) {
             return [
                 'success' => false,
@@ -38,7 +38,7 @@ class ProvinciaValidator {
             ];
         }
 
-        // ✅ data limpia
+        // data limpia
         $dataLimpia = [
             'id' => $data['id'] ?? null,
             'nombre' => $data['nombre']

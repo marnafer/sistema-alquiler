@@ -26,7 +26,7 @@ class UsuarioController
         }
 
         try {
-            $usuarios = Usuario::obtenerTodos();
+            $usuarios = Usuario::all();
 
             renderJson([
                 'success' => true,
@@ -49,13 +49,7 @@ class UsuarioController
     {
         $user = AutenticadorMiddleware::verificar();
 
-        // Sanitizar y validar ID
-        $idSan = sanitizarIdUsuario($id);
-        $validacionId = validarSoloIdUsuario($idSan);
-
-        if (!$validacionId['success']) {
-            renderJson($validacionId, 400);
-        }
+        $idSan = (int)$id;
 
         if ($user->rol_id != 3 && $user->sub != $idSan) {
             renderJson([
@@ -65,7 +59,7 @@ class UsuarioController
         }
 
         try {
-            $usuario = Usuario::obtenerPorId($idSan);
+            $usuario = Usuario::find($idSan);
 
             if (!$usuario) {
                 renderJson([
@@ -89,12 +83,13 @@ class UsuarioController
 
     /**
      * POST /api/usuarios
+     * REGISTRO
      */
     public function registrar()
     {
-        $raw = json_decode(file_get_contents('php://input'), true) ?? [];
+        $raw = json_decode(file_get_contents('php://input'), true);
 
-        if (!$raw) {
+        if (!$raw || !is_array($raw)) {
             renderJson([
                 'success' => false,
                 'error' => 'Datos inválidos'
@@ -114,7 +109,7 @@ class UsuarioController
             ], 400);
         }
 
-       // 3. Regla de negocio
+        // 3. Verificar email duplicado
         $usuarioModel = new Usuario();
 
         if ($usuarioModel->existePorEmail($data['email'])) {
@@ -125,13 +120,15 @@ class UsuarioController
         }
 
         try {
+            // 4. Hashear contraseña
             $data['contrasena'] = password_hash($data['contrasena'], PASSWORD_DEFAULT);
 
+            // 5. Crear usuario
             $usuario = Usuario::create($data);
 
             renderJson([
                 'success' => true,
-                'message' => 'Usuario creado',
+                'message' => 'Usuario creado correctamente',
                 'data' => [
                     'id' => $usuario->id,
                     'email' => $usuario->email
@@ -147,11 +144,11 @@ class UsuarioController
     }
 
     /**
-     * LOGIN
+     * POST /api/autenticador/login
      */
     public static function login()
     {
-        $raw = json_decode(file_get_contents('php://input'), true) ?? [];
+        $raw = json_decode(file_get_contents('php://input'), true);
 
         $email = $raw['email'] ?? null;
         $contrasena = $raw['contrasena'] ?? null;
@@ -161,28 +158,25 @@ class UsuarioController
                 'success' => false,
                 'error' => 'Datos incompletos'
             ], 400);
-            exit;
         }
 
         // Sanitizar email
-        $email = UsuarioSanitizer::sanitizarSoloEmail($email); 
+        $email = UsuarioSanitizer::sanitizarSoloEmail($email);
 
         // Validar email
-        $validacion = UsuarioValidator::validarEmailLoginUsuario($email); 
-
-        if (!$validacion['success']) {
-            renderJson($validacion, 400);
+        $validEmail = UsuarioValidator::validarEmailLoginUsuario($email);
+        if (!$validEmail['success']) {
+            renderJson($validEmail, 400);
         }
 
-        $validacionPass = UsuarioValidator::validarContrasenaUsuario($contrasena); // Validar contraseña (aunque no se sanitice, se valida su formato)
-
-        if (!$validacionPass['success']) {
-            renderJson($validacionPass, 400);
+        // Validar contraseña
+        $validPass = UsuarioValidator::validarContrasenaUsuario($contrasena);
+        if (!$validPass['success']) {
+            renderJson($validPass, 400);
         }
 
         $usuarioModel = new Usuario();
-
-        $usuario = $usuarioModel->verificarCredenciales($email, $contrasena); // Se instancia el modelo para usar el método de verificación de credenciales
+        $usuario = $usuarioModel->verificarCredenciales($email, $contrasena);
 
         if (!$usuario) {
             renderJson([
@@ -212,12 +206,12 @@ class UsuarioController
     {
         renderJson([
             'success' => true,
-            'message' => 'Logout exitoso (el cliente elimina el token)'
+            'message' => 'Logout (el cliente elimina el token)'
         ], 200);
     }
 
     /**
-     * DELETE
+     * DELETE /api/usuarios/{id}
      */
     public function eliminar($id)
     {
@@ -226,20 +220,12 @@ class UsuarioController
         if ($user->rol_id != 3) {
             renderJson([
                 'success' => false,
-                'error' => 'Solo admin'
+                'error' => 'Solo administradores'
             ], 403);
         }
 
-        // Sanitizar y validar ID
-        $idSan = sanitizarIdUsuario($id);
-        $validacion = validarSoloIdUsuario($idSan);
-
-        if (!$validacion['success']) {
-            renderJson($validacion, 400);
-        }
-
         try {
-            $usuario = Usuario::find($idSan);
+            $usuario = Usuario::find((int)$id);
 
             if (!$usuario) {
                 renderJson([
@@ -264,27 +250,23 @@ class UsuarioController
     }
 
     /**
-    * PUT /api/usuarios/{id}  // Editar usuario, solo admin o el mismo usuario
-    */
-
+     * PUT /api/usuarios/{id}
+     */
     public function actualizar($id)
     {
-        $user = AutenticadorMiddleware::verificar(); 
+        $user = AutenticadorMiddleware::verificar();
 
-        // Sanitizar y validar ID
-        $idSan = UsuarioSanitizer::sanitizarIdUsuario($id);
-        $validacionId = UsuarioValidator::validarSoloIdUsuario($idSan);
+        $id = (int)$id;
 
-        if (!$validacionId['success']) {
-            renderJson($validacionId, 400);
-        }
-        if ($user->rol_id != 3 && $user->sub != $idSan) {
+        if ($user->rol_id != 3 && $user->sub != $id) {
             renderJson([
                 'success' => false,
                 'error' => 'No autorizado'
             ], 403);
         }
-        $raw = json_decode(file_get_contents('php://input'), true) ?? []; 
+
+        $raw = json_decode(file_get_contents('php://input'), true);
+
         if (!is_array($raw)) {
             renderJson([
                 'success' => false,
@@ -292,10 +274,7 @@ class UsuarioController
             ], 400);
         }
 
-        // Sanitizar datos
         $data = UsuarioSanitizer::sanitizarUsuario($raw);
-
-        // Validar datos
         $validacion = UsuarioValidator::validarActualizarUsuario($data);
 
         if (!$validacion['success']) {
@@ -304,34 +283,26 @@ class UsuarioController
                 'errors' => $validacion['errors']
             ], 400);
         }
+
         try {
-            $usuario = Usuario::find($idSan);
-            if (!$usuario || $usuario->deleted_at !== null) {
+            $usuario = Usuario::find($id);
+
+            if (!$usuario) {
                 renderJson([
                     'success' => false,
                     'error' => 'Usuario no encontrado'
                 ], 404);
             }
 
-            // Si se actualiza la contraseña, hashearla
             if (!empty($data['contrasena'])) {
                 $data['contrasena'] = password_hash($data['contrasena'], PASSWORD_DEFAULT);
-            }
-            // Verificar si el nuevo email ya está registrado por otro usuario
-            $usuarioModel = new Usuario();
-
-            if (isset($data['email']) && $usuarioModel->existePorEmail($data['email'], $idSan)) {
-                renderJson([
-                    'success' => false,
-                    'error' => 'Email ya registrado por otro usuario'
-                ], 409);
             }
 
             $usuario->update($data);
 
             renderJson([
                 'success' => true,
-                'message' => 'Usuario actualizado exitosamente'
+                'message' => 'Usuario actualizado correctamente'
             ], 200);
 
         } catch (\Exception $e) {
@@ -341,4 +312,4 @@ class UsuarioController
             ], 500);
         }
     }
-}   
+}
